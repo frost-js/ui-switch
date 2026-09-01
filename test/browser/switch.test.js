@@ -179,6 +179,27 @@ test.describe('Switch', () => {
             expect(dividerBox.width).toBe(onBox.width / 2);
         });
 
+        test('keeps measured labels unwrapped in a constrained layout', async ({ page }) => {
+            await page.evaluate((_) => {
+                $.setStyle(document.body, { width: '100px' });
+                UI.Switch.init($.findOne('#switch'), {
+                    animate: false,
+                    offText: 'UNAVAILABLE',
+                    onText: 'AVAILABLE',
+                });
+            });
+
+            const outer = page.locator('.switch-outer');
+            const on = outer.locator('.switch-toggle-on');
+            const off = outer.locator('.switch-toggle-off');
+            await expect(on).toHaveCSS('flex-shrink', '0');
+            await expect(on).toHaveCSS('white-space', 'nowrap');
+            await expect(off).toHaveCSS('flex-shrink', '0');
+            await expect(off).toHaveCSS('white-space', 'nowrap');
+            expect(await on.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+            expect(await off.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+        });
+
         test('uses configured label and divider widths', async ({ page }) => {
             await page.evaluate((_) => {
                 UI.Switch.init($.findOne('#switch'), {

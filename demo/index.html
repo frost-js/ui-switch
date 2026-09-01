@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Frost UI Switch Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui.min.css">
+    <link rel="stylesheet" href="../dist/frost-ui-switch.css">
+    <link rel="stylesheet" href="assets/demo.css">
+    <script src="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui-bundle.min.js" defer></script>
+    <script src="../dist/frost-ui-switch.js" defer></script>
+    <script src="assets/demo.js" defer></script>
+</head>
+
+<body>
+    <header class="navbar bg-glass sticky-top border-bottom">
+        <div class="container d-flex align-items-center justify-content-between gap-3">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#top">
+                <span class="badge bg-primary bg-gradient shadow-glow fs-5" aria-hidden="true">F</span>
+                <span>Switch</span>
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <label class="small fw-bold mb-0" for="demo-theme">Theme</label>
+                <select class="input-outline input-sm w-auto rounded-pill" id="demo-theme" data-demo-theme>
+                    <option value="system">System</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <main class="container py-4 py-lg-5" id="top">
+        <section class="card border-0 overflow-hidden shadow-lg mb-5">
+            <div class="row g-0 align-items-stretch">
+                <div class="col-lg-7 d-flex align-items-center bg-ambient">
+                    <div class="p-4 p-md-5">
+                        <span class="badge bg-primary-subtle text-primary-subtle mb-3">Frost UI v3 component</span>
+                        <h1 class="display-2 mb-4">Toggle settings with <span class="text-gradient">clear intent.</span></h1>
+                        <p class="lead text-body-secondary mb-4">Explore semantic styles, five sizes, custom labels and widths, keyboard control, mouse and touch dragging, methods, events, themes, and RTL.</p>
+                        <nav class="d-flex flex-wrap gap-2" aria-label="Demo sections">
+                            <a class="btn btn-primary ripple" href="#sizes">Explore sizes</a>
+                            <a class="btn btn-secondary ripple" href="#interaction">Try interaction</a>
+                            <a class="btn btn-outline-primary ripple" href="#methods-events">Use the API</a>
+                        </nav>
+                    </div>
+                </div>
+                <div class="col-lg-5 d-flex align-items-center bg-glass border-start">
+                    <div class="p-4 p-md-5 w-100">
+                        <small class="text-body-secondary d-block mb-2">Live default example</small>
+                        <label class="fw-bold" for="hero-switch">Product notifications</label>
+                        <div class="demo-switch-stage d-flex align-items-center mt-2">
+                            <input id="hero-switch" type="checkbox" data-ui-toggle="switch" checked>
+                        </div>
+                        <p class="form-text mb-0">Click, drag, or focus the switch and press Space or Enter.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="sizes">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-primary fw-bold">Responsive scale</span>
+                <h2 class="h3 mb-1">Five component sizes</h2>
+                <p class="text-body-secondary mb-0">Size options adjust the switch font size and logical inline padding while preserving the same interaction and accessible state.</p>
+            </header>
+            <div class="row g-3">
+                <div class="col-sm-6 col-lg">
+                    <div class="card card-body h-100 p-4">
+                        <code class="mb-3">xs</code>
+                        <label for="size-xs">Extra small</label>
+                        <div class="demo-switch-stage d-flex align-items-center">
+                            <input id="size-xs" type="checkbox" data-ui-toggle="switch" data-ui-size="xs">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg">
+                    <div class="card card-body h-100 p-4">
+                        <code class="mb-3">sm</code>
+                        <label for="size-sm">Small</label>
+                        <div class="demo-switch-stage d-flex align-items-center">
+                            <input id="size-sm" type="checkbox" data-ui-toggle="switch" data-ui-size="sm" checked>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg">
+                    <div class="card card-body h-100 p-4">
+                        <code class="mb-3">md</code>
+                        <label for="size-md">Medium</label>
+                        <div class="demo-switch-stage d-flex align-items-center">
+                            <input id="size-md" type="checkbox" data-ui-toggle="switch" data-ui-size="md">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg">
+                    <div class="card card-body h-100 p-4">
+                        <code class="mb-3">lg</code>
+                        <label for="size-lg">Large</label>
+                        <div class="demo-switch-stage d-flex align-items-center">
+                            <input id="size-lg" type="checkbox" data-ui-toggle="switch" data-ui-size="lg" checked>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg">
+                    <div class="card card-body h-100 p-4">
+                        <code class="mb-3">xl</code>
+                        <label for="size-xl">Extra large</label>
+                        <div class="demo-switch-stage d-flex align-items-center">
+                            <input id="size-xl" type="checkbox" data-ui-toggle="switch" data-ui-size="xl">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="customization">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-accent fw-bold">Presentation options</span>
+                <h2 class="h3 mb-1">Styles, text, and widths</h2>
+                <p class="text-body-secondary mb-0">Use Frost UI semantic classes for state color, replace the visible labels, or set predictable pixel widths for fixed layouts.</p>
+            </header>
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card card-body h-100 p-4">
+                        <span class="badge bg-success-subtle text-success-subtle align-self-start mb-3">Semantic colors</span>
+                        <h3 class="h5">Custom styles</h3>
+                        <p class="text-body-secondary">Success, warning, and danger utilities style the three switch regions.</p>
+                        <label for="style-switch">Deployment status</label>
+                        <div class="demo-switch-stage d-flex align-items-center">
+                            <input
+                                id="style-switch"
+                                type="checkbox"
+                                data-ui-toggle="switch"
+                                data-ui-on-style="text-bg-success"
+                                data-ui-divider-style="bg-warning"
+                                data-ui-off-style="text-bg-danger"
+                                checked>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card card-body h-100 p-4">
+                        <span class="badge bg-primary-subtle text-primary-subtle align-self-start mb-3">Readable states</span>
+                        <h3 class="h5">Custom text</h3>
+                        <p class="text-body-secondary">The wider label is measured and applied to both sides automatically.</p>
+                        <label for="text-switch">Workspace access</label>
+                        <div class="demo-switch-stage d-flex align-items-center">
+                            <input
+                                id="text-switch"
+                                type="checkbox"
+                                data-ui-toggle="switch"
+                                data-ui-on-text="AVAILABLE"
+                                data-ui-off-text="UNAVAILABLE">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card card-body h-100 p-4">
+                        <span class="badge bg-accent-subtle text-accent-subtle align-self-start mb-3">Fixed geometry</span>
+                        <h3 class="h5">Custom widths</h3>
+                        <p class="text-body-secondary">Set label and divider widths independently for a deliberate layout.</p>
+                        <label for="width-switch">Release channel</label>
+                        <div class="demo-switch-stage d-flex align-items-center">
+                            <input
+                                id="width-switch"
+                                type="checkbox"
+                                data-ui-toggle="switch"
+                                data-ui-label-width="96"
+                                data-ui-divider-width="24"
+                                data-ui-on-text="STABLE"
+                                data-ui-off-text="PREVIEW"
+                                checked>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="interaction">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-success fw-bold">Input behavior</span>
+                <h2 class="h3 mb-1">Keyboard, drag, and disabled state</h2>
+                <p class="text-body-secondary mb-0">The visible switch is focusable and draggable while the native checkbox remains synchronized for forms and label activation.</p>
+            </header>
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="card h-100">
+                        <div class="card-body p-4 p-md-5">
+                            <h3 class="h5">Try every input mode</h3>
+                            <p class="text-body-secondary">Tab to focus, press Space or Enter, click either state, or drag horizontally with a mouse or touch pointer.</p>
+                            <label for="interaction-switch">Interactive preference</label>
+                            <div class="demo-interaction-zone rounded-3 p-4 mt-2 d-flex align-items-center justify-content-center">
+                                <input
+                                    id="interaction-switch"
+                                    type="checkbox"
+                                    data-ui-toggle="switch"
+                                    data-ui-label-width="104"
+                                    data-ui-on-text="ENABLED"
+                                    data-ui-off-text="DISABLED">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <h3 class="h5">Native states</h3>
+                            <p class="text-body-secondary">Checked state is read during initialization. Disabled state removes switch interaction and focusability.</p>
+                            <div class="mb-4">
+                                <label for="checked-switch">Initially checked</label>
+                                <div class="demo-switch-stage d-flex align-items-center">
+                                    <input id="checked-switch" type="checkbox" data-ui-toggle="switch" checked>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="disabled-switch">Unavailable setting</label>
+                                <div class="demo-switch-stage d-flex align-items-center">
+                                    <input id="disabled-switch" type="checkbox" data-ui-toggle="switch" disabled>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="methods-events">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-primary fw-bold">Programmatic API</span>
+                <h2 class="h3 mb-1">Methods and events</h2>
+                <p class="text-body-secondary mb-0">Control an instance directly and inspect each completed <code>change.ui.switch</code> state transition.</p>
+            </header>
+            <div class="row g-4">
+                <div class="col-xl-7">
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <label for="methods-switch">Interactive instance</label>
+                            <div class="demo-switch-stage d-flex align-items-center mb-4">
+                                <input
+                                    id="methods-switch"
+                                    type="checkbox"
+                                    data-ui-toggle="switch"
+                                    data-ui-duration="180"
+                                    data-ui-on-text="ACTIVE"
+                                    data-ui-off-text="INACTIVE">
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <button class="btn btn-primary ripple" data-demo-method="init" type="button">Init</button>
+                                <button class="btn btn-outline-danger ripple" data-demo-method="dispose" type="button">Dispose</button>
+                                <button class="btn btn-outline-success ripple" data-demo-method="enable" type="button">Enable</button>
+                                <button class="btn btn-outline-warning ripple" data-demo-method="disable" type="button">Disable</button>
+                                <button class="btn btn-secondary ripple" data-demo-method="setStateOn" type="button">Set on</button>
+                                <button class="btn btn-secondary ripple" data-demo-method="setStateOff" type="button">Set off</button>
+                                <button class="btn btn-secondary ripple" data-demo-method="toggleState" type="button">Toggle</button>
+                                <button class="btn btn-outline-secondary ripple" data-demo-method="getState" type="button">Get state</button>
+                            </div>
+                            <output class="small text-body-secondary" id="method-output" aria-live="polite">Ready.</output>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-5">
+                    <div class="card h-100">
+                        <div class="card-header d-flex align-items-center justify-content-between gap-2">
+                            <strong>Event log</strong>
+                            <button class="btn btn-sm btn-outline-secondary" id="clear-events" type="button">Clear</button>
+                        </div>
+                        <div class="card-body demo-event-log overflow-y-auto" id="event-log" role="log" aria-live="polite">
+                            <p class="small text-body-secondary mb-0">Interact with the API switch to log state changes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-5" id="rtl">
+            <header class="border-bottom pb-3 mb-4">
+                <span class="text-accent fw-bold">Bidirectional layout</span>
+                <h2 class="h3 mb-1">Right-to-left behavior</h2>
+                <p class="text-body-secondary mb-0">The unchecked position and physical drag direction mirror automatically when the input or an ancestor uses RTL direction.</p>
+            </header>
+            <div class="card bg-glass">
+                <div class="card-body p-4 p-md-5" dir="rtl">
+                    <label class="fw-bold" for="rtl-switch">الإشعارات</label>
+                    <div class="demo-switch-stage d-flex align-items-center">
+                        <input
+                            id="rtl-switch"
+                            type="checkbox"
+                            dir="rtl"
+                            data-ui-toggle="switch"
+                            data-ui-label-width="96"
+                            data-ui-on-style="text-bg-success"
+                            data-ui-on-text="تشغيل"
+                            data-ui-off-text="إيقاف">
+                    </div>
+                    <p class="form-text mb-0">اسحب إلى اليسار للتشغيل، أو استخدم لوحة المفاتيح.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="border-top bg-glass">
+        <div class="container py-4 d-flex flex-wrap justify-content-between gap-2">
+            <span class="text-body-secondary">Frost UI Switch</span>
+            <a href="https://github.com/frost-js/ui-switch">View the repository</a>
+        </div>
+    </footer>
+</body>
+
+</html>

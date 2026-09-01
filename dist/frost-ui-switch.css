@@ -30,8 +30,10 @@
 }
 .switch .switch-toggle-on,
 .switch .switch-toggle-off {
+  flex-shrink: 0;
   padding-block: var(--ui-switch-padding-y);
   padding-inline: var(--ui-switch-padding-x);
+  white-space: nowrap;
 }
 
 .switch-xs {

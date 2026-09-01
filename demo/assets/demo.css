@@ -1,0 +1,12 @@
+.demo-switch-stage {
+    min-height: 4.5rem;
+}
+
+.demo-interaction-zone {
+    min-height: 9rem;
+    border: 2px dashed currentcolor;
+}
+
+.demo-event-log {
+    height: 18rem;
+}
