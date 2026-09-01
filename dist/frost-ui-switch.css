@@ -7,6 +7,7 @@
   --ui-switch-border-radius: var(--ui-border-radius);
   --ui-switch-focus-box-shadow: 0 0 0 var(--ui-focus-ring-width) var(--ui-focus-ring-color);
   --ui-switch-disabled-opacity: var(--ui-disabled-opacity);
+  --ui-switch-transition-duration: 0.5s;
   overflow: hidden;
   font-size: var(--ui-switch-font-size);
   text-align: center;
@@ -27,6 +28,8 @@
 
 .switch {
   display: flex;
+  transition-timing-function: var(--ui-transition-timing-function);
+  transition-property: transform;
 }
 .switch .switch-toggle-on,
 .switch .switch-toggle-off {
@@ -34,6 +37,10 @@
   padding-block: var(--ui-switch-padding-y);
   padding-inline: var(--ui-switch-padding-x);
   white-space: nowrap;
+}
+
+.switch-dragging .switch {
+  transition: none;
 }
 
 .switch-xs {
@@ -54,6 +61,12 @@
 .switch-xl {
   --ui-switch-padding-x: 1.5rem;
   --ui-switch-font-size: clamp(1.35rem, 1.35rem + 0.33vw, 1.5rem);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .switch {
+    transition-duration: calc(var(--ui-switch-transition-duration) * var(--ui-switch-transition-scale, 1));
+  }
 }
 
 /*# sourceMappingURL=frost-ui-switch.css.map */

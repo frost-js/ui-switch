@@ -1,12 +1,12 @@
 import $ from '@fr0st/query';
-import { BaseComponent, generateId, getPosition } from '@fr0st/ui';
+import { BaseComponent, generateId, getPosition, waitForTransition } from '@fr0st/ui';
 
 /**
  * @typedef {object} SwitchOptions
- * @property {boolean} [animate=true] Whether to animate state changes.
+ * @property {boolean} [animate=true] Whether to transition state changes.
  * @property {string} [dividerStyle='bg-body-tertiary'] The class applied to the divider.
  * @property {number|null} [dividerWidth=null] The divider width in pixels, or `null` to derive it from the label width.
- * @property {number} [duration=500] The full animation duration in milliseconds.
+ * @property {number} [duration=500] The full CSS transition duration in milliseconds.
  * @property {number|null} [labelWidth=null] The label width in pixels, or `null` to measure the labels.
  * @property {string} [offStyle='text-bg-secondary'] The class applied to the off label.
  * @property {string} [offText='OFF'] The off label text.
@@ -59,7 +59,6 @@ export default class Switch extends BaseComponent {
         this.#refresh();
         this.#refreshDisabled();
         this.#events();
-        this.#animateState(this.#targetState);
     }
 
     /**
@@ -140,7 +139,7 @@ export default class Switch extends BaseComponent {
     }
 
     /**
-     * Animates the Switch to a normalized checkbox state.
+     * Transitions the Switch to a normalized checkbox state.
      * @param {boolean} checked The checkbox state to normalize.
      */
     #animateState(checked) {
@@ -153,11 +152,8 @@ export default class Switch extends BaseComponent {
         this.#targetState = checked;
 
         const animationId = this.#animationId;
-        const startX = Number.isFinite(this.#currentX) ?
-            this.#currentX :
-            this.#getTargetX(!checked);
         const targetX = this.#getTargetX(checked);
-        const distance = Math.abs(targetX - startX);
+        const distance = Math.abs(targetX - this.#currentX);
         const duration = Number(this.options.duration);
 
         if (
@@ -167,8 +163,7 @@ export default class Switch extends BaseComponent {
             duration <= 0 ||
             distance <= 0
         ) {
-            this.#currentX = targetX;
-            $.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
+            this.#setPosition(targetX);
             this.#setState(checked);
             return;
         }
@@ -176,31 +171,29 @@ export default class Switch extends BaseComponent {
         const durationScale = Math.min(distance / this.#toggleWidth, 1);
         this.#animating = true;
 
-        $.animate(
-            this.#container,
-            (node, progress) => {
-                this.#currentX = $._lerp(startX, targetX, progress);
-                $.setStyle(node, { transform: `translateX(${this.#currentX}px)` });
-            },
-            { duration: duration * durationScale },
-        ).then((_) => {
+        $.setStyle(this.#outerContainer, {
+            '--ui-switch-transition-duration': `${duration}ms`,
+            '--ui-switch-transition-scale': durationScale,
+        });
+
+        // Commit the current position before starting the transition.
+        $.css(this.#container, 'transform');
+        $.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
+
+        waitForTransition(this.#container, ['transform']).then((_) => {
             if (animationId !== this.#animationId || !this.node) {
                 return;
             }
 
             this.#animating = false;
             this.#currentX = targetX;
-            $.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
+            $.setStyle(this.#outerContainer, { '--ui-switch-transition-scale': '' });
             this.#setState(checked);
-        }).catch((_) => {
-            if (animationId === this.#animationId) {
-                this.#animating = false;
-            }
         });
     }
 
     /**
-     * Stops the active animation without allowing its handlers to update state.
+     * Cancels the active transition at its rendered position.
      */
     #cancelAnimation() {
         this.#animationId++;
@@ -209,8 +202,11 @@ export default class Switch extends BaseComponent {
             return;
         }
 
+        const currentX = this.#getRenderedX();
+
         this.#animating = false;
-        $.stop(this.#container, { finish: false });
+        this.#setPosition(currentX);
+        $.setStyle(this.#outerContainer, { '--ui-switch-transition-scale': '' });
     }
 
     /**
@@ -226,7 +222,7 @@ export default class Switch extends BaseComponent {
     }
 
     /**
-     * Completes a pointer drag and animates to the nearest state.
+     * Completes a pointer drag and transitions to the nearest state.
      */
     #endDrag() {
         if (!this.node || !this.#sliding) {
@@ -235,6 +231,7 @@ export default class Switch extends BaseComponent {
 
         this.#sliding = false;
         this.#suppressNextClick();
+        $.removeClass(this.#outerContainer, this.constructor.classes.dragging);
         this.#animateState(this.#isCheckedPosition());
     }
 
@@ -304,6 +301,23 @@ export default class Switch extends BaseComponent {
     }
 
     /**
+     * Gets the rendered horizontal translation of the Switch track.
+     * @returns {number} The rendered horizontal translation in pixels.
+     */
+    #getRenderedX() {
+        const transform = $.css(this.#container, 'transform');
+
+        if (!transform || transform === 'none') {
+            return this.#currentX;
+        }
+
+        const Matrix = this.#window.DOMMatrixReadOnly || this.#window.DOMMatrix;
+        const x = new Matrix(transform).m41;
+
+        return Number.isFinite(x) ? x : this.#currentX;
+    }
+
+    /**
      * Gets the translation for a checkbox state in the current text direction.
      * @param {boolean} checked Whether the checkbox is checked.
      * @returns {number} The horizontal translation in pixels.
@@ -349,7 +363,10 @@ export default class Switch extends BaseComponent {
             return;
         }
 
-        this.#sliding = true;
+        if (!this.#sliding) {
+            this.#sliding = true;
+            $.addClass(this.#outerContainer, this.constructor.classes.dragging);
+        }
 
         if (e.cancelable) {
             e.preventDefault();
@@ -383,13 +400,13 @@ export default class Switch extends BaseComponent {
         const totalWidth = (this.#toggleWidth * 2) + this.#dividerWidth;
 
         this.#rtl = $.css(this.#outerContainer, 'direction') === 'rtl';
-        this.#currentX = this.#getTargetX(false);
+        const startX = this.#getTargetX(this.#targetState);
 
         $.setStyle(this.#outerContainer, { width: `${outerWidth}px` });
         $.setStyle(this.#container, {
             width: `${totalWidth}px`,
-            transform: `translateX(${this.#currentX}px)`,
         });
+        this.#setPosition(startX);
         $.setStyle(this.#onToggle, { width: `${this.#toggleWidth}px` });
         $.setStyle(this.#divider, { width: `${this.#dividerWidth}px` });
         $.setStyle(this.#offToggle, { width: `${this.#toggleWidth}px` });
@@ -491,6 +508,21 @@ export default class Switch extends BaseComponent {
         $.addClass(this.node, this.constructor.classes.hide);
         $.setAttribute(this.node, { tabindex: -1 });
         $.before(this.node, this.#outerContainer);
+    }
+
+    /**
+     * Sets the Switch track position without a CSS transition.
+     * @param {number} x The horizontal translation in pixels.
+     */
+    #setPosition(x) {
+        this.#currentX = x;
+
+        $.setStyle(this.#container, {
+            transition: 'none',
+            transform: `translateX(${x}px)`,
+        });
+        $.css(this.#container, 'transform');
+        $.setStyle(this.#container, { transition: '' });
     }
 
     /**

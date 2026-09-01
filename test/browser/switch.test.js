@@ -1,6 +1,8 @@
 import { expect, test } from '#test';
 import { resetPage } from '../setup/browser.js';
 
+test.use({ reducedMotion: 'no-preference' });
+
 test.beforeEach(async ({ page }) => {
     await resetPage(page);
 });
@@ -706,16 +708,17 @@ test.describe('Switch', () => {
         });
     });
 
-    test.describe('animation', () => {
+    test.describe('transition', () => {
         test('updates immediately when animation is disabled', async ({ page }) => {
-            await page.evaluate((_) => {
+            expect(await page.evaluate((_) => {
                 const input = $.findOne('#switch');
                 const component = UI.Switch.init(input, {
                     animate: false,
                     labelWidth: 80,
                 });
                 component.setState(true);
-            });
+                return component.getState();
+            })).toBe(true);
 
             await expect(page.locator('#switch')).toBeChecked();
             await expect(page.locator('.switch')).toHaveCSS(
@@ -724,36 +727,85 @@ test.describe('Switch', () => {
             );
         });
 
-        test('animates state changes', async ({ page }) => {
+        test('does not transition when reduced motion is preferred', async ({ page }) => {
+            await page.emulateMedia({ reducedMotion: 'reduce' });
+
             await page.evaluate((_) => {
-                const component = UI.Switch.init($.findOne('#switch'), {
-                    duration: 80,
+                const input = $.findOne('#switch');
+                const component = UI.Switch.init(input, {
+                    duration: 200,
                     labelWidth: 80,
                 });
                 component.setState(true);
             });
 
+            await expect(page.locator('.switch')).toHaveCSS('transition-duration', '0s');
+            await expect(page.locator('#switch')).toBeChecked();
+        });
+
+        test('does not transition the initial checked state', async ({ page }) => {
+            expect(await page.evaluate((_) => {
+                const input = $.findOne('#switch');
+                input.checked = true;
+                UI.Switch.init(input, {
+                    duration: 200,
+                    labelWidth: 80,
+                });
+                return input.previousElementSibling.firstElementChild
+                    .getAnimations()
+                    .length;
+            })).toBe(0);
+
+            await expect(page.locator('#switch')).toBeChecked();
+            await expect(page.locator('.switch')).toHaveCSS(
+                'transform',
+                'matrix(1, 0, 0, 1, 0, 0)',
+            );
+        });
+
+        test('transitions state changes with the configured duration', async ({ page }) => {
+            expect(await page.evaluate((_) => {
+                const component = UI.Switch.init($.findOne('#switch'), {
+                    duration: 200,
+                    labelWidth: 80,
+                });
+                component.setState(true);
+                return component.getState();
+            })).toBe(false);
+
+            const track = page.locator('.switch');
+            await expect(track).toHaveCSS('transition-property', 'transform');
+            await expect(track).toHaveCSS('transition-duration', '0.2s');
             await expect(page.locator('#switch')).toBeChecked();
             await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'true');
         });
 
-        test('shortens animation after a partial drag', async ({ page }) => {
+        test('shortens the transition after a partial drag', async ({ page }) => {
             await page.evaluate((_) => {
                 const input = $.findOne('#switch');
                 UI.Switch.init(input, {
-                    duration: 120,
+                    duration: 1200,
                     labelWidth: 80,
                 });
                 const outer = input.previousElementSibling;
                 outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
                 window.dispatchEvent(new MouseEvent('mousemove', { clientX: 460 }));
-                window.dispatchEvent(new MouseEvent('mouseup'));
             });
 
+            const outer = page.locator('.switch-outer');
+            const track = outer.locator('.switch');
+            await expect(outer).toHaveClass(/\bswitch-dragging\b/);
+            await expect(track).toHaveCSS('transition-duration', '0s');
+
+            await page.evaluate((_) => {
+                window.dispatchEvent(new MouseEvent('mouseup'));
+            });
+            await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
+            await expect(track).toHaveCSS('transition-duration', '0.3s');
             await expect(page.locator('#switch')).toBeChecked();
         });
 
-        test('handles rapid interrupted animation deterministically', async ({ page }) => {
+        test('handles rapid interrupted transitions deterministically', async ({ page }) => {
             await page.evaluate(async (_) => {
                 const input = $.findOne('#switch');
                 const component = UI.Switch.init(input, {
@@ -777,7 +829,7 @@ test.describe('Switch', () => {
             );
         });
 
-        test('allows a second click to reverse an active animation', async ({ page }) => {
+        test('allows a second click to reverse an active transition', async ({ page }) => {
             await page.evaluate((_) => {
                 UI.Switch.init($.findOne('#switch'), {
                     duration: 100,
@@ -794,7 +846,7 @@ test.describe('Switch', () => {
             await expect(outer).toHaveAttribute('aria-checked', 'false');
         });
 
-        test('recovers when the track animation is stopped externally', async ({ page }) => {
+        test('completes when the track transition is canceled externally', async ({ page }) => {
             expect(await page.evaluate(async (_) => {
                 const input = $.findOne('#switch');
                 const component = UI.Switch.init(input, {
@@ -803,7 +855,15 @@ test.describe('Switch', () => {
                 });
                 component.setState(true);
                 await new Promise((resolve) => setTimeout(resolve, 20));
-                $.stop(input.previousElementSibling.firstElementChild, { finish: false });
+                const transition = input.previousElementSibling.firstElementChild
+                    .getAnimations()
+                    .find((animation) => animation instanceof window.CSSTransition);
+
+                if (!transition) {
+                    throw new Error('Expected a CSS transition.');
+                }
+
+                transition.cancel();
                 await Promise.resolve();
                 component.setState(false);
                 await new Promise((resolve) => setTimeout(resolve, 120));
@@ -1021,7 +1081,7 @@ test.describe('Switch', () => {
             await expect(page.locator('.switch-outer')).toHaveCount(1);
         });
 
-        test('cancels active animation and click suppression during disposal', async ({ page }) => {
+        test('cancels an active transition and click suppression during disposal', async ({ page }) => {
             expect(await page.evaluate(async (_) => {
                 const input = $.findOne('#switch');
                 const component = UI.Switch.init(input, {

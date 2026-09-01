@@ -9,6 +9,7 @@
     --ui-switch-border-radius: #{vars.$switch-border-radius};
     --ui-switch-focus-box-shadow: #{vars.$switch-focus-box-shadow};
     --ui-switch-disabled-opacity: #{vars.$switch-disabled-opacity};
+    --ui-switch-transition-duration: #{vars.$switch-transition-duration};
 
     overflow: hidden;
     font-size: var(--ui-switch-font-size);
@@ -30,6 +31,8 @@
 
 .switch {
     display: flex;
+    transition-timing-function: var(--ui-transition-timing-function);
+    transition-property: transform;
 
     .switch-toggle-on,
     .switch-toggle-off {
@@ -38,6 +41,10 @@
         padding-inline: var(--ui-switch-padding-x);
         white-space: nowrap;
     }
+}
+
+.switch-dragging .switch {
+    transition: none;
 }
 
 .switch-xs {
@@ -58,4 +65,10 @@
 .switch-xl {
     --ui-switch-padding-x: #{vars.$switch-xl-padding-x};
     --ui-switch-font-size: #{vars.$switch-xl-font-size};
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .switch {
+        transition-duration: calc(var(--ui-switch-transition-duration) * var(--ui-switch-transition-scale, 1));
+    }
 }

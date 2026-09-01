@@ -19,6 +19,7 @@ Switch.defaults = {
 
 Switch.classes = {
     disabled: 'switch-disabled',
+    dragging: 'switch-dragging',
     hide: 'visually-hidden',
     outer: 'switch-outer',
     switch: 'switch',

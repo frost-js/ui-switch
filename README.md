@@ -8,7 +8,7 @@
 [![CSS gzip size](https://img.badgesize.io/frost-js/ui-switch/main/dist/frost-ui-switch.min.css?compression=gzip&label=CSS%20gzip%20size&style=flat-square)](https://github.com/frost-js/ui-switch/blob/main/dist/frost-ui-switch.min.css)
 [![license](https://img.shields.io/github/license/frost-js/ui-switch?style=flat-square)](./LICENSE)
 
-Accessible toggle-switch control for Frost UI with configurable labels, semantic styles, sizes, animation, mouse and touch dragging, keyboard operation, and RTL support.
+Accessible toggle-switch control for Frost UI with configurable labels, semantic styles, sizes, CSS transitions, mouse and touch dragging, keyboard operation, and RTL support.
 
 ## Highlights
 
@@ -150,10 +150,10 @@ Resolved `instance.options` are frozen.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `animate` | `boolean` | `true` | Animate movement between checked and unchecked positions. |
+| `animate` | `boolean` | `true` | Transition between checked and unchecked positions. |
 | `dividerStyle` | `string` | `'bg-body-tertiary'` | Apply one or more Frost UI classes to the center divider. |
 | `dividerWidth` | `number \| null` | `null` | Set the divider width in pixels. `null` derives half the label width. |
-| `duration` | `number` | `500` | Set the full animation duration in milliseconds. Partial movement scales the duration. |
+| `duration` | `number` | `500` | Set the full CSS transition duration in milliseconds. Partial movement scales the duration. |
 | `labelWidth` | `number \| null` | `null` | Set both label widths in pixels. `null` measures the wider label. |
 | `offStyle` | `string` | `'text-bg-secondary'` | Apply one or more Frost UI classes to the unchecked label. |
 | `offText` | `string` | `'OFF'` | Set the unchecked label text. |
@@ -260,7 +260,7 @@ $.addEvent(
 );
 ```
 
-The underlying event type is `change`; fQuery exposes `event.namespace` as `ui.switch`. Setting the current state again does not emit another event. When animation is enabled, the checkbox, ARIA state, and event update when the animation reaches its final position.
+The underlying event type is `change`; fQuery exposes `event.namespace` as `ui.switch`. Setting the current state again does not emit another event. When transitions are enabled, the checkbox, ARIA state, and event update when the transition reaches its final position.
 
 A native checkbox `change` event also moves the rendered control to match the input, which keeps label activation and application-driven checkbox updates synchronized.
 
@@ -312,6 +312,8 @@ Switch combines its component stylesheet with Frost UI v3 CSS custom properties,
 </section>
 ```
 
+Movement uses CSS `transform` transitions and respects `prefers-reduced-motion`. Initial checked state is rendered directly without an entrance transition.
+
 Normal document and ancestor direction is respected. A `dir` attribute placed directly on the original input is also copied to the rendered control:
 
 ```html
@@ -322,7 +324,7 @@ In RTL layouts, the visual positions and physical drag direction are mirrored wh
 
 ## Disposal
 
-`dispose()` removes the rendered switch, component events, pending animation, drag click suppression, and registered fQuery component data. It restores the original input's pre-existing visually-hidden state and `tabindex` while preserving unrelated or runtime-added classes.
+`dispose()` removes the rendered switch, component events, pending transition, drag click suppression, and registered fQuery component data. It restores the original input's pre-existing visually-hidden state and `tabindex` while preserving unrelated or runtime-added classes.
 
 Generated label IDs are removed only when they still contain the component-generated value. Existing IDs and IDs changed by the application remain untouched. The input's current checked and disabled state are preserved.
 
@@ -341,7 +343,7 @@ const compactSwitch = Switch.init(node, { size: 'sm' });
 - UMD consumers should continue loading Frost UI's bundle first, then `frost-ui-switch.js`; the component extends the existing `globalThis.UI` namespace.
 - Replace unsupported internal `_node` and `_options` access with the public `node` and `options` getters.
 - Do not import legacy prototype or wrapper source paths. Use the package root, `dist/*`, or supported `src/*` exports.
-- Public option names, class names, and methods remain available. v3 additionally fixes label association, disposal restoration, interrupted animation, zero-size layouts, touch dragging, and RTL movement.
+- Public option names, class names, and methods remain available. v3 additionally fixes label association, disposal restoration, interrupted transitions, zero-size layouts, touch dragging, and RTL movement.
 - Development requires Node `^20.19.0`, `^22.13.0`, or `>=24`.
 
 ## Development

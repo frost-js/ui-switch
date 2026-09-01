@@ -7,6 +7,7 @@ $switch-border-color: var(--ui-border-color-translucent) !default;
 $switch-border-radius: var(--ui-border-radius) !default;
 $switch-focus-box-shadow: 0 0 0 var(--ui-focus-ring-width) var(--ui-focus-ring-color) !default;
 $switch-disabled-opacity: var(--ui-disabled-opacity) !default;
+$switch-transition-duration: .5s !default;
 
 $switch-xs-font-size: .5rem !default;
 $switch-xs-padding-x: .5rem !default;

@@ -29,6 +29,7 @@ export async function resetPage(page) {
         UI.Switch.defaults.duration = 500;
 
         UI.Switch.classes.disabled = 'switch-disabled';
+        UI.Switch.classes.dragging = 'switch-dragging';
         UI.Switch.classes.hide = 'visually-hidden';
         UI.Switch.classes.outer = 'switch-outer';
         UI.Switch.classes.switch = 'switch';

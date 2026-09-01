@@ -36,10 +36,10 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 //#region src/js/switch.js
 /**
 	* @typedef {object} SwitchOptions
-	* @property {boolean} [animate=true] Whether to animate state changes.
+	* @property {boolean} [animate=true] Whether to transition state changes.
 	* @property {string} [dividerStyle='bg-body-tertiary'] The class applied to the divider.
 	* @property {number|null} [dividerWidth=null] The divider width in pixels, or `null` to derive it from the label width.
-	* @property {number} [duration=500] The full animation duration in milliseconds.
+	* @property {number} [duration=500] The full CSS transition duration in milliseconds.
 	* @property {number|null} [labelWidth=null] The label width in pixels, or `null` to measure the labels.
 	* @property {string} [offStyle='text-bg-secondary'] The class applied to the off label.
 	* @property {string} [offText='OFF'] The off label text.
@@ -87,7 +87,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#refresh();
 			this.#refreshDisabled();
 			this.#events();
-			this.#animateState(this.#targetState);
 		}
 		/**
 		* Disables the Switch.
@@ -145,7 +144,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#animateState(!this.#targetState);
 		}
 		/**
-		* Animates the Switch to a normalized checkbox state.
+		* Transitions the Switch to a normalized checkbox state.
 		* @param {boolean} checked The checkbox state to normalize.
 		*/
 		#animateState(checked) {
@@ -154,39 +153,40 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#cancelAnimation();
 			this.#targetState = checked;
 			const animationId = this.#animationId;
-			const startX = Number.isFinite(this.#currentX) ? this.#currentX : this.#getTargetX(!checked);
 			const targetX = this.#getTargetX(checked);
-			const distance = Math.abs(targetX - startX);
+			const distance = Math.abs(targetX - this.#currentX);
 			const duration = Number(this.options.duration);
 			if (!this.options.animate || this.#toggleWidth <= 0 || !Number.isFinite(duration) || duration <= 0 || distance <= 0) {
-				this.#currentX = targetX;
-				_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
+				this.#setPosition(targetX);
 				this.#setState(checked);
 				return;
 			}
 			const durationScale = Math.min(distance / this.#toggleWidth, 1);
 			this.#animating = true;
-			_fr0st_query.default.animate(this.#container, (node, progress) => {
-				this.#currentX = _fr0st_query.default._lerp(startX, targetX, progress);
-				_fr0st_query.default.setStyle(node, { transform: `translateX(${this.#currentX}px)` });
-			}, { duration: duration * durationScale }).then((_) => {
+			_fr0st_query.default.setStyle(this.#outerContainer, {
+				"--ui-switch-transition-duration": `${duration}ms`,
+				"--ui-switch-transition-scale": durationScale
+			});
+			_fr0st_query.default.css(this.#container, "transform");
+			_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
+			(0, _fr0st_ui.waitForTransition)(this.#container, ["transform"]).then((_) => {
 				if (animationId !== this.#animationId || !this.node) return;
 				this.#animating = false;
 				this.#currentX = targetX;
-				_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
+				_fr0st_query.default.setStyle(this.#outerContainer, { "--ui-switch-transition-scale": "" });
 				this.#setState(checked);
-			}).catch((_) => {
-				if (animationId === this.#animationId) this.#animating = false;
 			});
 		}
 		/**
-		* Stops the active animation without allowing its handlers to update state.
+		* Cancels the active transition at its rendered position.
 		*/
 		#cancelAnimation() {
 			this.#animationId++;
 			if (!this.#animating || !this.#container) return;
+			const currentX = this.#getRenderedX();
 			this.#animating = false;
-			_fr0st_query.default.stop(this.#container, { finish: false });
+			this.#setPosition(currentX);
+			_fr0st_query.default.setStyle(this.#outerContainer, { "--ui-switch-transition-scale": "" });
 		}
 		/**
 		* Clears pending click suppression after a drag.
@@ -199,12 +199,13 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#suppressClick = false;
 		}
 		/**
-		* Completes a pointer drag and animates to the nearest state.
+		* Completes a pointer drag and transitions to the nearest state.
 		*/
 		#endDrag() {
 			if (!this.node || !this.#sliding) return;
 			this.#sliding = false;
 			this.#suppressNextClick();
+			_fr0st_query.default.removeClass(this.#outerContainer, this.constructor.classes.dragging);
 			this.#animateState(this.#isCheckedPosition());
 		}
 		/**
@@ -241,6 +242,16 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.addEvent(this.#outerContainer, "mousedown.ui.switch touchstart.ui.switch", dragEvent);
 		}
 		/**
+		* Gets the rendered horizontal translation of the Switch track.
+		* @returns {number} The rendered horizontal translation in pixels.
+		*/
+		#getRenderedX() {
+			const transform = _fr0st_query.default.css(this.#container, "transform");
+			if (!transform || transform === "none") return this.#currentX;
+			const x = new (this.#window.DOMMatrixReadOnly || this.#window.DOMMatrix)(transform).m41;
+			return Number.isFinite(x) ? x : this.#currentX;
+		}
+		/**
 		* Gets the translation for a checkbox state in the current text direction.
 		* @param {boolean} checked Whether the checkbox is checked.
 		* @returns {number} The horizontal translation in pixels.
@@ -265,7 +276,10 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			const { x } = (0, _fr0st_ui.getPosition)(e);
 			if (!Number.isFinite(x)) return;
 			if (!this.#sliding && Math.abs(x - this.#dragStartX) < Switch.#DRAG_THRESHOLD) return;
-			this.#sliding = true;
+			if (!this.#sliding) {
+				this.#sliding = true;
+				_fr0st_query.default.addClass(this.#outerContainer, this.constructor.classes.dragging);
+			}
 			if (e.cancelable) e.preventDefault();
 			const minX = this.#rtl ? 0 : -this.#toggleWidth;
 			const maxX = this.#rtl ? this.#toggleWidth : 0;
@@ -285,12 +299,10 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			const outerWidth = this.#toggleWidth + this.#dividerWidth;
 			const totalWidth = this.#toggleWidth * 2 + this.#dividerWidth;
 			this.#rtl = _fr0st_query.default.css(this.#outerContainer, "direction") === "rtl";
-			this.#currentX = this.#getTargetX(false);
+			const startX = this.#getTargetX(this.#targetState);
 			_fr0st_query.default.setStyle(this.#outerContainer, { width: `${outerWidth}px` });
-			_fr0st_query.default.setStyle(this.#container, {
-				width: `${totalWidth}px`,
-				transform: `translateX(${this.#currentX}px)`
-			});
+			_fr0st_query.default.setStyle(this.#container, { width: `${totalWidth}px` });
+			this.#setPosition(startX);
 			_fr0st_query.default.setStyle(this.#onToggle, { width: `${this.#toggleWidth}px` });
 			_fr0st_query.default.setStyle(this.#divider, { width: `${this.#dividerWidth}px` });
 			_fr0st_query.default.setStyle(this.#offToggle, { width: `${this.#toggleWidth}px` });
@@ -364,6 +376,19 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.before(this.node, this.#outerContainer);
 		}
 		/**
+		* Sets the Switch track position without a CSS transition.
+		* @param {number} x The horizontal translation in pixels.
+		*/
+		#setPosition(x) {
+			this.#currentX = x;
+			_fr0st_query.default.setStyle(this.#container, {
+				transition: "none",
+				transform: `translateX(${x}px)`
+			});
+			_fr0st_query.default.css(this.#container, "transform");
+			_fr0st_query.default.setStyle(this.#container, { transition: "" });
+		}
+		/**
 		* Synchronizes the ARIA and checkbox state and emits a change event when needed.
 		* @param {boolean} checked Whether the checkbox is checked.
 		*/
@@ -416,6 +441,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 	};
 	Switch.classes = {
 		disabled: "switch-disabled",
+		dragging: "switch-dragging",
 		hide: "visually-hidden",
 		outer: "switch-outer",
 		switch: "switch",
