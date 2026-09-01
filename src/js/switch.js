@@ -309,7 +309,11 @@ export default class Switch extends BaseComponent {
      * @returns {number} The horizontal translation in pixels.
      */
     #getTargetX(checked) {
-        return checked === this.#rtl ? -this.#toggleWidth : 0;
+        if (checked) {
+            return 0;
+        }
+
+        return this.#rtl ? this.#toggleWidth : -this.#toggleWidth;
     }
 
     /**
@@ -351,11 +355,10 @@ export default class Switch extends BaseComponent {
             e.preventDefault();
         }
 
-        this.#currentX = $._clamp(
-            x - this.#dragOffsetX,
-            -this.#toggleWidth,
-            0,
-        );
+        const minX = this.#rtl ? 0 : -this.#toggleWidth;
+        const maxX = this.#rtl ? this.#toggleWidth : 0;
+
+        this.#currentX = $._clamp(x - this.#dragOffsetX, minX, maxX);
         $.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
     }
 

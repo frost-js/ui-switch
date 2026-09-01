@@ -246,7 +246,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* @returns {number} The horizontal translation in pixels.
 		*/
 		#getTargetX(checked) {
-			return checked === this.#rtl ? -this.#toggleWidth : 0;
+			if (checked) return 0;
+			return this.#rtl ? this.#toggleWidth : -this.#toggleWidth;
 		}
 		/**
 		* Determines which state is nearest to the current drag position.
@@ -266,7 +267,9 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (!this.#sliding && Math.abs(x - this.#dragStartX) < Switch.#DRAG_THRESHOLD) return;
 			this.#sliding = true;
 			if (e.cancelable) e.preventDefault();
-			this.#currentX = _fr0st_query.default._clamp(x - this.#dragOffsetX, -this.#toggleWidth, 0);
+			const minX = this.#rtl ? 0 : -this.#toggleWidth;
+			const maxX = this.#rtl ? this.#toggleWidth : 0;
+			this.#currentX = _fr0st_query.default._clamp(x - this.#dragOffsetX, minX, maxX);
 			_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
 		}
 		/**

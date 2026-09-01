@@ -30,7 +30,8 @@
 }
 .switch .switch-toggle-on,
 .switch .switch-toggle-off {
-  padding: var(--ui-switch-padding-y) var(--ui-switch-padding-x);
+  padding-block: var(--ui-switch-padding-y);
+  padding-inline: var(--ui-switch-padding-x);
 }
 
 .switch-xs {

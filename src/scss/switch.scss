@@ -1,14 +1,14 @@
-@import "vars";
+@use "vars";
 
 .switch-outer {
-    --ui-switch-padding-x: #{$switch-padding-x};
-    --ui-switch-padding-y: #{$switch-padding-y};
-    --ui-switch-font-size: #{$switch-font-size};
-    --ui-switch-border-width: #{$switch-border-width};
-    --ui-switch-border-color: #{$switch-border-color};
-    --ui-switch-border-radius: #{$switch-border-radius};
-    --ui-switch-focus-box-shadow: #{$switch-focus-box-shadow};
-    --ui-switch-disabled-opacity: #{$switch-disabled-opacity};
+    --ui-switch-padding-x: #{vars.$switch-padding-x};
+    --ui-switch-padding-y: #{vars.$switch-padding-y};
+    --ui-switch-font-size: #{vars.$switch-font-size};
+    --ui-switch-border-width: #{vars.$switch-border-width};
+    --ui-switch-border-color: #{vars.$switch-border-color};
+    --ui-switch-border-radius: #{vars.$switch-border-radius};
+    --ui-switch-focus-box-shadow: #{vars.$switch-focus-box-shadow};
+    --ui-switch-disabled-opacity: #{vars.$switch-disabled-opacity};
 
     overflow: hidden;
     font-size: var(--ui-switch-font-size);
@@ -33,26 +33,27 @@
 
     .switch-toggle-on,
     .switch-toggle-off {
-        padding: var(--ui-switch-padding-y) var(--ui-switch-padding-x);
+        padding-block: var(--ui-switch-padding-y);
+        padding-inline: var(--ui-switch-padding-x);
     }
 }
 
 .switch-xs {
-    --ui-switch-padding-x: #{$switch-xs-padding-x};
-    --ui-switch-font-size: #{$switch-xs-font-size};
+    --ui-switch-padding-x: #{vars.$switch-xs-padding-x};
+    --ui-switch-font-size: #{vars.$switch-xs-font-size};
 }
 
 .switch-sm {
-    --ui-switch-padding-x: #{$switch-sm-padding-x};
-    --ui-switch-font-size: #{$switch-sm-font-size};
+    --ui-switch-padding-x: #{vars.$switch-sm-padding-x};
+    --ui-switch-font-size: #{vars.$switch-sm-font-size};
 }
 
 .switch-lg {
-    --ui-switch-padding-x: #{$switch-lg-padding-x};
-    --ui-switch-font-size: #{$switch-lg-font-size};
+    --ui-switch-padding-x: #{vars.$switch-lg-padding-x};
+    --ui-switch-font-size: #{vars.$switch-lg-font-size};
 }
 
 .switch-xl {
-    --ui-switch-padding-x: #{$switch-xl-padding-x};
-    --ui-switch-font-size: #{$switch-xl-font-size};
+    --ui-switch-padding-x: #{vars.$switch-xl-padding-x};
+    --ui-switch-font-size: #{vars.$switch-xl-font-size};
 }
