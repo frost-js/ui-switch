@@ -349,15 +349,12 @@ const compactSwitch = Switch.init(node, { size: 'sm' });
 ## Development
 
 ```bash
-npm ci
+npm test
 npm run lint
-npm run lint:sass:unused
 npm run build
-npm run test:browser
-npm run test:coverage
 ```
 
-`npm test` builds the bundles and runs the Playwright suite in Chromium, Firefox, and WebKit. Use `npm run test:headed` for headed browsers or `npm run test:ui` for Playwright's interactive runner.
+`npm test` builds the bundles and runs the Playwright suite in Chromium, Firefox, and WebKit. Install exact dependencies with `npm ci`. Run `npm run lint:sass:unused` to check Sass variables, `npm run test:coverage` to generate coverage, `npm run test:headed` for headed browsers, or `npm run test:ui` for Playwright's interactive runner.
 
 ## License
 
