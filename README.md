@@ -337,8 +337,8 @@ const compactSwitch = Switch.init(node, { size: 'sm' });
 
 ## Migrating from v2 to v3
 
-- Upgrade peer dependencies to `@fr0st/query ^4.1.2` and `@fr0st/ui ^3.0.0`.
-- Load Frost UI v3 CSS together with `frost-ui-switch.css`; Switch still requires its component-specific layout stylesheet.
+- Upgrade peer dependencies to `@fr0st/query ^5.0.0` and `@fr0st/ui ^4.0.0`.
+- Load Frost UI v4 CSS together with `frost-ui-switch.css`; Switch still requires its component-specific layout stylesheet.
 - Bundlers now resolve the package root to the compiled ESM bundle. Browser ESM consumers must provide import-map entries for `@fr0st/core`, `@fr0st/query`, and `@fr0st/ui`.
 - UMD consumers should continue loading Frost UI's bundle first, then `frost-ui-switch.js`; the component extends the existing `globalThis.UI` namespace.
 - Replace unsupported internal `_node` and `_options` access with the public `node` and `options` getters.
