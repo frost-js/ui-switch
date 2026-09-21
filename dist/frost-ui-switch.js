@@ -97,6 +97,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		disable() {
 			_fr0st_query.default.setAttribute(this.node, { disabled: true });
+			if (this.#dragActive) this.#resetState();
 			this.#refreshDisabled();
 		}
 		/** @inheritdoc */
@@ -413,7 +414,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.before(this.node, this.#outerContainer);
 		}
 		/**
-		* Restores the rendered state after a native form reset.
+		* Restores the rendered state from the checkbox and cancels active interactions.
 		*/
 		#resetState() {
 			this.#cancelAnimation();

@@ -227,6 +227,53 @@ test.describe('Switch', () => {
     });
 
     test.describe('#disable', () => {
+        for (const checked of [false, true]) {
+            test(`cancels an active drag from the ${checked ? 'checked' : 'unchecked'} state`, async ({ page }) => {
+                await page.clock.install({ time: 0 });
+                await page.clock.pauseAt(1000);
+                await page.evaluate((checked) => {
+                    const input = $.findOne('#switch');
+                    input.checked = checked;
+                    const component = UI.Switch.init(input, { animate: false, labelWidth: 80 });
+                    const outer = input.previousElementSibling;
+
+                    window.disableChanges = 0;
+                    $.addEvent(input, 'change.ui.switch', (_) => window.disableChanges++);
+
+                    outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
+                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: checked ? 340 : 460 }));
+                    component.disable();
+                }, checked);
+
+                const input = page.locator('#switch');
+                const outer = page.locator('.switch-outer');
+                await expect(input).toBeDisabled();
+                await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
+                await expect(page.locator('.switch')).toHaveCSS(
+                    'transform',
+                    `matrix(1, 0, 0, 1, ${checked ? 0 : -80}, 0)`,
+                );
+
+                await page.evaluate((checked) => {
+                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: checked ? 300 : 500 }));
+                    window.dispatchEvent(new MouseEvent('mouseup'));
+                    $.findOne('.switch-outer').click();
+                }, checked);
+
+                await expect(input).toHaveJSProperty('checked', checked);
+                await expect(outer).toHaveAttribute('aria-checked', `${checked}`);
+                expect(await page.evaluate((_) => window.disableChanges)).toBe(0);
+
+                await page.evaluate((_) => $.getData($.findOne('#switch'), 'switch').enable());
+                await page.clock.runFor(501);
+                await outer.click();
+
+                await expect(input).toHaveJSProperty('checked', !checked);
+                await expect(outer).toHaveAttribute('aria-checked', `${!checked}`);
+                expect(await page.evaluate((_) => window.disableChanges)).toBe(1);
+            });
+        }
+
         test('disables the Switch', async ({ page }) => {
             await page.evaluate((_) => {
                 UI.Switch.init(

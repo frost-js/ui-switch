@@ -65,6 +65,7 @@ var Switch = class Switch extends BaseComponent {
 	*/
 	disable() {
 		$.setAttribute(this.node, { disabled: true });
+		if (this.#dragActive) this.#resetState();
 		this.#refreshDisabled();
 	}
 	/** @inheritdoc */
@@ -381,7 +382,7 @@ var Switch = class Switch extends BaseComponent {
 		$.before(this.node, this.#outerContainer);
 	}
 	/**
-	* Restores the rendered state after a native form reset.
+	* Restores the rendered state from the checkbox and cancels active interactions.
 	*/
 	#resetState() {
 		this.#cancelAnimation();
