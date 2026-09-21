@@ -2,6 +2,7 @@ import { BaseComponent, generateId, getPosition, initComponent, waitForTransitio
 import $ from "@fr0st/query";
 
 //#region src/js/switch.js
+var window = $.getWindow();
 /**
 * @typedef {object} SwitchOptions
 * @property {boolean} [animate=true] Whether to transition state changes.
@@ -38,14 +39,13 @@ var Switch = class Switch extends BaseComponent {
 	#outerContainer;
 	#pendingResets = /* @__PURE__ */ new Map();
 	#resetHandler;
+	#resizeObserver;
 	#rtl = false;
 	#sliding = false;
-	#suppressClick = false;
 	#suppressClickTimer = null;
 	#tabIndex;
 	#targetState;
 	#toggleWidth = 0;
-	#window;
 	/**
 	* Creates a Switch.
 	* @param {HTMLInputElement} node The checkbox input node.
@@ -53,7 +53,6 @@ var Switch = class Switch extends BaseComponent {
 	*/
 	constructor(node, options) {
 		super(node, options);
-		this.#window = this.node.ownerDocument.defaultView;
 		this.#form = this.node.form;
 		this.#targetState = this.getState();
 		this.#render();
@@ -73,6 +72,7 @@ var Switch = class Switch extends BaseComponent {
 		this.#cancelAnimation();
 		this.#clearClickSuppression();
 		this.#pendingResets.clear();
+		this.#resizeObserver?.disconnect();
 		for (const [label, id] of this.#generatedLabelIds) if ($.getAttribute(label, "id") === id) $.removeAttribute(label, "id");
 		$.remove(this.#outerContainer);
 		$.removeEvent(this.node, "focus.ui.switch");
@@ -90,7 +90,7 @@ var Switch = class Switch extends BaseComponent {
 		this.#onToggle = null;
 		this.#outerContainer = null;
 		this.#resetHandler = null;
-		this.#window = null;
+		this.#resizeObserver = null;
 		super.dispose();
 	}
 	/**
@@ -170,10 +170,9 @@ var Switch = class Switch extends BaseComponent {
 	*/
 	#clearClickSuppression() {
 		if (this.#suppressClickTimer !== null) {
-			this.#window?.clearTimeout(this.#suppressClickTimer);
+			window.clearTimeout(this.#suppressClickTimer);
 			this.#suppressClickTimer = null;
 		}
-		this.#suppressClick = false;
 	}
 	/**
 	* Completes a pointer drag and transitions to the nearest state.
@@ -200,7 +199,7 @@ var Switch = class Switch extends BaseComponent {
 			this.#resetHandler = (event) => {
 				const animationId = this.#animationId;
 				this.#pendingResets.set(event, animationId);
-				this.#window.setTimeout(() => {
+				window.setTimeout(() => {
 					this.#pendingResets.delete(event);
 					if (this.node && !event.defaultPrevented && animationId === this.#animationId) this.#resetState();
 				}, 0);
@@ -222,7 +221,7 @@ var Switch = class Switch extends BaseComponent {
 		$.addEvent(this.#outerContainer, "click.ui.switch", (e) => {
 			if (e.button || $.is(this.node, ":disabled")) return;
 			e.preventDefault();
-			if (this.#suppressClick) {
+			if (this.#suppressClickTimer !== null) {
 				this.#clearClickSuppression();
 				return;
 			}
@@ -243,7 +242,7 @@ var Switch = class Switch extends BaseComponent {
 	#getRenderedX() {
 		const transform = $.css(this.#container, "transform");
 		if (!transform || transform === "none") return this.#currentX;
-		const x = new (this.#window.DOMMatrixReadOnly || this.#window.DOMMatrix)(transform).m41;
+		const x = new (window.DOMMatrixReadOnly || window.DOMMatrix)(transform).m41;
 		return Number.isFinite(x) ? x : this.#currentX;
 	}
 	/**
@@ -289,6 +288,15 @@ var Switch = class Switch extends BaseComponent {
 		const measuredOnWidth = Number($.width(this.#onToggle)) || 0;
 		const measuredOffWidth = Number($.width(this.#offToggle)) || 0;
 		this.#toggleWidth = Number.isFinite(labelWidth) && labelWidth > 0 ? labelWidth : Math.max(measuredOnWidth, measuredOffWidth);
+		if (this.#toggleWidth <= 0) {
+			if (!this.#resizeObserver) {
+				this.#resizeObserver = new window.ResizeObserver(() => {
+					if (this.node) this.#refresh();
+				});
+				this.#resizeObserver.observe(this.#outerContainer);
+			}
+			return;
+		}
 		const dividerWidth = Number(this.options.dividerWidth);
 		this.#dividerWidth = Number.isFinite(dividerWidth) && dividerWidth > 0 ? dividerWidth : this.#toggleWidth / 2;
 		const outerWidth = this.#toggleWidth + this.#dividerWidth;
@@ -301,6 +309,8 @@ var Switch = class Switch extends BaseComponent {
 		$.setStyle(this.#onToggle, { width: `${this.#toggleWidth}px` });
 		$.setStyle(this.#divider, { width: `${this.#dividerWidth}px` });
 		$.setStyle(this.#offToggle, { width: `${this.#toggleWidth}px` });
+		this.#resizeObserver?.disconnect();
+		this.#resizeObserver = null;
 	}
 	/**
 	* Synchronizes disabled styling and focusability with the checkbox.
@@ -427,8 +437,7 @@ var Switch = class Switch extends BaseComponent {
 	*/
 	#suppressNextClick() {
 		this.#clearClickSuppression();
-		this.#suppressClick = true;
-		this.#suppressClickTimer = this.#window.setTimeout((_) => this.#clearClickSuppression(), 500);
+		this.#suppressClickTimer = window.setTimeout((_) => this.#clearClickSuppression(), 500);
 	}
 };
 

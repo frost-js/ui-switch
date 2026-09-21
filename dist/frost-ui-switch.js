@@ -34,7 +34,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 _fr0st_query = __toESM(_fr0st_query, 1);
 
 //#region src/js/switch.js
-/**
+	var window = _fr0st_query.default.getWindow();
+	/**
 	* @typedef {object} SwitchOptions
 	* @property {boolean} [animate=true] Whether to transition state changes.
 	* @property {string} [dividerStyle='bg-body-tertiary'] The class applied to the divider.
@@ -70,14 +71,13 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#outerContainer;
 		#pendingResets = /* @__PURE__ */ new Map();
 		#resetHandler;
+		#resizeObserver;
 		#rtl = false;
 		#sliding = false;
-		#suppressClick = false;
 		#suppressClickTimer = null;
 		#tabIndex;
 		#targetState;
 		#toggleWidth = 0;
-		#window;
 		/**
 		* Creates a Switch.
 		* @param {HTMLInputElement} node The checkbox input node.
@@ -85,7 +85,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		constructor(node, options) {
 			super(node, options);
-			this.#window = this.node.ownerDocument.defaultView;
 			this.#form = this.node.form;
 			this.#targetState = this.getState();
 			this.#render();
@@ -105,6 +104,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#cancelAnimation();
 			this.#clearClickSuppression();
 			this.#pendingResets.clear();
+			this.#resizeObserver?.disconnect();
 			for (const [label, id] of this.#generatedLabelIds) if (_fr0st_query.default.getAttribute(label, "id") === id) _fr0st_query.default.removeAttribute(label, "id");
 			_fr0st_query.default.remove(this.#outerContainer);
 			_fr0st_query.default.removeEvent(this.node, "focus.ui.switch");
@@ -122,7 +122,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#onToggle = null;
 			this.#outerContainer = null;
 			this.#resetHandler = null;
-			this.#window = null;
+			this.#resizeObserver = null;
 			super.dispose();
 		}
 		/**
@@ -202,10 +202,9 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#clearClickSuppression() {
 			if (this.#suppressClickTimer !== null) {
-				this.#window?.clearTimeout(this.#suppressClickTimer);
+				window.clearTimeout(this.#suppressClickTimer);
 				this.#suppressClickTimer = null;
 			}
-			this.#suppressClick = false;
 		}
 		/**
 		* Completes a pointer drag and transitions to the nearest state.
@@ -232,7 +231,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				this.#resetHandler = (event) => {
 					const animationId = this.#animationId;
 					this.#pendingResets.set(event, animationId);
-					this.#window.setTimeout(() => {
+					window.setTimeout(() => {
 						this.#pendingResets.delete(event);
 						if (this.node && !event.defaultPrevented && animationId === this.#animationId) this.#resetState();
 					}, 0);
@@ -254,7 +253,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.addEvent(this.#outerContainer, "click.ui.switch", (e) => {
 				if (e.button || _fr0st_query.default.is(this.node, ":disabled")) return;
 				e.preventDefault();
-				if (this.#suppressClick) {
+				if (this.#suppressClickTimer !== null) {
 					this.#clearClickSuppression();
 					return;
 				}
@@ -275,7 +274,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#getRenderedX() {
 			const transform = _fr0st_query.default.css(this.#container, "transform");
 			if (!transform || transform === "none") return this.#currentX;
-			const x = new (this.#window.DOMMatrixReadOnly || this.#window.DOMMatrix)(transform).m41;
+			const x = new (window.DOMMatrixReadOnly || window.DOMMatrix)(transform).m41;
 			return Number.isFinite(x) ? x : this.#currentX;
 		}
 		/**
@@ -321,6 +320,15 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			const measuredOnWidth = Number(_fr0st_query.default.width(this.#onToggle)) || 0;
 			const measuredOffWidth = Number(_fr0st_query.default.width(this.#offToggle)) || 0;
 			this.#toggleWidth = Number.isFinite(labelWidth) && labelWidth > 0 ? labelWidth : Math.max(measuredOnWidth, measuredOffWidth);
+			if (this.#toggleWidth <= 0) {
+				if (!this.#resizeObserver) {
+					this.#resizeObserver = new window.ResizeObserver(() => {
+						if (this.node) this.#refresh();
+					});
+					this.#resizeObserver.observe(this.#outerContainer);
+				}
+				return;
+			}
 			const dividerWidth = Number(this.options.dividerWidth);
 			this.#dividerWidth = Number.isFinite(dividerWidth) && dividerWidth > 0 ? dividerWidth : this.#toggleWidth / 2;
 			const outerWidth = this.#toggleWidth + this.#dividerWidth;
@@ -333,6 +341,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.setStyle(this.#onToggle, { width: `${this.#toggleWidth}px` });
 			_fr0st_query.default.setStyle(this.#divider, { width: `${this.#dividerWidth}px` });
 			_fr0st_query.default.setStyle(this.#offToggle, { width: `${this.#toggleWidth}px` });
+			this.#resizeObserver?.disconnect();
+			this.#resizeObserver = null;
 		}
 		/**
 		* Synchronizes disabled styling and focusability with the checkbox.
@@ -459,8 +469,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#suppressNextClick() {
 			this.#clearClickSuppression();
-			this.#suppressClick = true;
-			this.#suppressClickTimer = this.#window.setTimeout((_) => this.#clearClickSuppression(), 500);
+			this.#suppressClickTimer = window.setTimeout((_) => this.#clearClickSuppression(), 500);
 		}
 	};
 

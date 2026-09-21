@@ -178,6 +178,8 @@ const switchControl = Switch.init(node, {
 
 Invalid, non-positive, or absent widths fall back to measured dimensions. Invalid or non-positive durations update the component immediately.
 
+If Switch is initialized while hidden, automatic sizing waits until the control becomes measurable. A temporary resize observer refreshes the layout when it appears, then disconnects. Explicit positive `labelWidth` values are applied immediately.
+
 ## Data attributes
 
 All options can be supplied through `data-ui-*` attributes:

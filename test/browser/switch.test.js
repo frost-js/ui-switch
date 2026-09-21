@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 test.describe('Switch', () => {
     test.beforeEach(async ({ page }) => {
         await page.evaluate((_) => {
-            $.setHTML(
+            $.setHtml(
                 document.body,
                 '<input id="switch" type="checkbox"><input id="switch2" type="checkbox">',
             );
@@ -97,7 +97,7 @@ test.describe('Switch', () => {
     test.describe('#dispose', () => {
         test('removes the Switch and restores the original input', async ({ page }) => {
             expect(await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<input class="existing" id="switch" tabindex="4" type="checkbox">',
                 );
@@ -118,7 +118,7 @@ test.describe('Switch', () => {
 
         test('restores existing hidden and absent tabindex state', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<input class="visually-hidden existing" id="switch" type="checkbox">',
                 );
@@ -133,7 +133,7 @@ test.describe('Switch', () => {
 
         test('restores generated label IDs without removing runtime IDs', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<label>Generated <input id="switch" type="checkbox"></label><label id="existing" for="switch">Existing</label>',
                 );
@@ -389,7 +389,7 @@ test.describe('Switch', () => {
 
         test('renders checked, required, and disabled state', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<input id="switch" type="checkbox" checked required disabled>',
                 );
@@ -433,7 +433,7 @@ test.describe('Switch', () => {
 
         test('uses existing and generated explicit label IDs safely', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<label id="first-label">First</label><label>Second</label><input type="checkbox">',
                 );
@@ -457,7 +457,7 @@ test.describe('Switch', () => {
 
         test('combines input and associated label references', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<span id="description">Description</span><label id="label" for="switch">Label</label><input id="switch" type="checkbox" aria-labelledby="description">',
                 );
@@ -472,7 +472,7 @@ test.describe('Switch', () => {
 
         test('supports a wrapping label', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<label id="wrapper">Notifications <input id="switch" type="checkbox"></label>',
                 );
@@ -960,7 +960,7 @@ test.describe('Switch', () => {
 
         test('guards zero width and invalid durations', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<div hidden><input id="zero" type="checkbox"></div><input id="invalid" type="checkbox"><input id="negative" type="checkbox">',
                 );
@@ -1099,7 +1099,7 @@ test.describe('Switch', () => {
     test.describe('size option', () => {
         test('renders every size', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     ['xs', 'sm', 'md', 'lg', 'xl']
                         .map((size) => `<input id="${size}" type="checkbox">`)
@@ -1251,9 +1251,9 @@ test.describe('Switch', () => {
             );
         });
 
-        test('handles hidden layout without NaN styles', async ({ page }) => {
+        test('defers hidden layout without fixing widths to zero', async ({ page }) => {
             await page.evaluate((_) => {
-                $.setHTML(
+                $.setHtml(
                     document.body,
                     '<div hidden><input id="switch" type="checkbox" checked></div>',
                 );
@@ -1261,12 +1261,13 @@ test.describe('Switch', () => {
             });
 
             const outer = page.locator('.switch-outer');
-            await expect(outer).toHaveCSS('width', '0px');
-            await expect(outer.locator('.switch')).toHaveCSS('width', '0px');
-            await expect(outer.locator('.switch')).toHaveAttribute(
-                'style',
-                /transform: translateX\(0px\)/,
-            );
+            expect(await outer.evaluate((node) => [
+                node.style.width,
+                node.querySelector('.switch').style.width,
+                node.querySelector('.switch-toggle-on').style.width,
+                node.querySelector('.switch-toggle-off').style.width,
+            ])).toEqual(['', '', '', '']);
+            await expect(outer).toHaveAttribute('aria-checked', 'true');
             await expect(outer.locator('.switch')).not.toHaveAttribute('style', /NaN/);
         });
     });

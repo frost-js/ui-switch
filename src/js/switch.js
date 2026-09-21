@@ -1,6 +1,8 @@
 import $ from '@fr0st/query';
 import { BaseComponent, generateId, getPosition, waitForTransition } from '@fr0st/ui';
 
+const window = $.getWindow();
+
 /**
  * @typedef {object} SwitchOptions
  * @property {boolean} [animate=true] Whether to transition state changes.
@@ -39,14 +41,13 @@ export default class Switch extends BaseComponent {
     #outerContainer;
     #pendingResets = new Map;
     #resetHandler;
+    #resizeObserver;
     #rtl = false;
     #sliding = false;
-    #suppressClick = false;
     #suppressClickTimer = null;
     #tabIndex;
     #targetState;
     #toggleWidth = 0;
-    #window;
 
     /**
      * Creates a Switch.
@@ -56,7 +57,6 @@ export default class Switch extends BaseComponent {
     constructor(node, options) {
         super(node, options);
 
-        this.#window = this.node.ownerDocument.defaultView;
         this.#form = this.node.form;
         this.#targetState = this.getState();
 
@@ -79,6 +79,8 @@ export default class Switch extends BaseComponent {
         this.#cancelAnimation();
         this.#clearClickSuppression();
         this.#pendingResets.clear();
+
+        this.#resizeObserver?.disconnect();
 
         for (const [label, id] of this.#generatedLabelIds) {
             if ($.getAttribute(label, 'id') === id) {
@@ -114,7 +116,7 @@ export default class Switch extends BaseComponent {
         this.#onToggle = null;
         this.#outerContainer = null;
         this.#resetHandler = null;
-        this.#window = null;
+        this.#resizeObserver = null;
 
         super.dispose();
     }
@@ -236,11 +238,9 @@ export default class Switch extends BaseComponent {
      */
     #clearClickSuppression() {
         if (this.#suppressClickTimer !== null) {
-            this.#window?.clearTimeout(this.#suppressClickTimer);
+            window.clearTimeout(this.#suppressClickTimer);
             this.#suppressClickTimer = null;
         }
-
-        this.#suppressClick = false;
     }
 
     /**
@@ -280,7 +280,7 @@ export default class Switch extends BaseComponent {
                 const animationId = this.#animationId;
                 this.#pendingResets.set(event, animationId);
 
-                this.#window.setTimeout(() => {
+                window.setTimeout(() => {
                     this.#pendingResets.delete(event);
 
                     if (this.node && !event.defaultPrevented && animationId === this.#animationId) {
@@ -326,7 +326,7 @@ export default class Switch extends BaseComponent {
 
             e.preventDefault();
 
-            if (this.#suppressClick) {
+            if (this.#suppressClickTimer !== null) {
                 this.#clearClickSuppression();
                 return;
             }
@@ -364,7 +364,7 @@ export default class Switch extends BaseComponent {
             return this.#currentX;
         }
 
-        const Matrix = this.#window.DOMMatrixReadOnly || this.#window.DOMMatrix;
+        const Matrix = window.DOMMatrixReadOnly || window.DOMMatrix;
         const x = new Matrix(transform).m41;
 
         return Number.isFinite(x) ? x : this.#currentX;
@@ -445,6 +445,20 @@ export default class Switch extends BaseComponent {
             labelWidth :
             Math.max(measuredOnWidth, measuredOffWidth);
 
+        if (this.#toggleWidth <= 0) {
+            if (!this.#resizeObserver) {
+                this.#resizeObserver = new window.ResizeObserver(() => {
+                    if (this.node) {
+                        this.#refresh();
+                    }
+                });
+
+                this.#resizeObserver.observe(this.#outerContainer);
+            }
+
+            return;
+        }
+
         const dividerWidth = Number(this.options.dividerWidth);
         this.#dividerWidth = Number.isFinite(dividerWidth) && dividerWidth > 0 ?
             dividerWidth :
@@ -464,6 +478,9 @@ export default class Switch extends BaseComponent {
         $.setStyle(this.#onToggle, { width: `${this.#toggleWidth}px` });
         $.setStyle(this.#divider, { width: `${this.#dividerWidth}px` });
         $.setStyle(this.#offToggle, { width: `${this.#toggleWidth}px` });
+
+        this.#resizeObserver?.disconnect();
+        this.#resizeObserver = null;
     }
 
     /**
@@ -647,8 +664,7 @@ export default class Switch extends BaseComponent {
     #suppressNextClick() {
         this.#clearClickSuppression();
 
-        this.#suppressClick = true;
-        this.#suppressClickTimer = this.#window.setTimeout(
+        this.#suppressClickTimer = window.setTimeout(
             (_) => this.#clearClickSuppression(),
             500,
         );
