@@ -59,13 +59,17 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#currentX = 0;
 		#divider;
 		#dividerWidth = 0;
+		#dragActive = false;
 		#dragOffsetX = 0;
 		#dragStartX = 0;
+		#form;
 		#generatedLabelIds = /* @__PURE__ */ new Map();
 		#hidden;
 		#offToggle;
 		#onToggle;
 		#outerContainer;
+		#pendingResets = /* @__PURE__ */ new Map();
+		#resetHandler;
 		#rtl = false;
 		#sliding = false;
 		#suppressClick = false;
@@ -82,6 +86,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		constructor(node, options) {
 			super(node, options);
 			this.#window = this.node.ownerDocument.defaultView;
+			this.#form = this.node.form;
 			this.#targetState = this.getState();
 			this.#render();
 			this.#refresh();
@@ -99,20 +104,24 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		dispose() {
 			this.#cancelAnimation();
 			this.#clearClickSuppression();
+			this.#pendingResets.clear();
 			for (const [label, id] of this.#generatedLabelIds) if (_fr0st_query.default.getAttribute(label, "id") === id) _fr0st_query.default.removeAttribute(label, "id");
 			_fr0st_query.default.remove(this.#outerContainer);
 			_fr0st_query.default.removeEvent(this.node, "focus.ui.switch");
 			_fr0st_query.default.removeEvent(this.node, "change.ui.switch");
+			if (this.#form) _fr0st_query.default.removeEvent(this.#form, "reset.ui.switch", this.#resetHandler);
 			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
 			if (this.#tabIndex === null) _fr0st_query.default.removeAttribute(this.node, "tabindex");
 			else _fr0st_query.default.setAttribute(this.node, { tabindex: this.#tabIndex });
 			this.#container = null;
 			this.#divider = null;
+			this.#form = null;
 			this.#generatedLabelIds = null;
 			this.#offToggle = null;
 			this.#onToggle = null;
 			this.#outerContainer = null;
+			this.#resetHandler = null;
 			this.#window = null;
 			super.dispose();
 		}
@@ -170,7 +179,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.css(this.#container, "transform");
 			_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
 			(0, _fr0st_ui.waitForTransition)(this.#container, ["transform"]).then((_) => {
-				if (animationId !== this.#animationId || !this.node) return;
+				if (animationId !== this.#animationId || !this.node || [...this.#pendingResets].some(([event, resetAnimationId]) => resetAnimationId === animationId && !event.defaultPrevented)) return;
 				this.#animating = false;
 				this.#currentX = targetX;
 				_fr0st_query.default.setStyle(this.#outerContainer, { "--ui-switch-transition-scale": "" });
@@ -202,7 +211,14 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Completes a pointer drag and transitions to the nearest state.
 		*/
 		#endDrag() {
-			if (!this.node || !this.#sliding) return;
+			const dragActive = this.#dragActive;
+			this.#dragActive = false;
+			if (!this.node) return;
+			if (!dragActive) {
+				this.#suppressNextClick();
+				return;
+			}
+			if (!this.#sliding) return;
 			this.#sliding = false;
 			this.#suppressNextClick();
 			_fr0st_query.default.removeClass(this.#outerContainer, this.constructor.classes.dragging);
@@ -212,6 +228,17 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Attaches input, keyboard, click, mouse, and touch events.
 		*/
 		#events() {
+			if (this.#form) {
+				this.#resetHandler = (event) => {
+					const animationId = this.#animationId;
+					this.#pendingResets.set(event, animationId);
+					this.#window.setTimeout(() => {
+						this.#pendingResets.delete(event);
+						if (this.node && !event.defaultPrevented && animationId === this.#animationId) this.#resetState();
+					}, 0);
+				};
+				_fr0st_query.default.addEvent(this.#form, "reset.ui.switch", this.#resetHandler);
+			}
 			_fr0st_query.default.addEvent(this.node, "focus.ui.switch", (_) => {
 				_fr0st_query.default.focus(this.#outerContainer);
 			});
@@ -272,7 +299,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* @param {MouseEvent|TouchEvent} e The pointer move event.
 		*/
 		#moveDrag(e) {
-			if (!this.node || this.#toggleWidth <= 0) return;
+			if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
 			const { x } = (0, _fr0st_ui.getPosition)(e);
 			if (!Number.isFinite(x)) return;
 			if (!this.#sliding && Math.abs(x - this.#dragStartX) < Switch.#DRAG_THRESHOLD) return;
@@ -376,6 +403,19 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.before(this.node, this.#outerContainer);
 		}
 		/**
+		* Restores the rendered state after a native form reset.
+		*/
+		#resetState() {
+			this.#cancelAnimation();
+			this.#clearClickSuppression();
+			this.#dragActive = false;
+			this.#sliding = false;
+			_fr0st_query.default.removeClass(this.#outerContainer, this.constructor.classes.dragging);
+			this.#targetState = this.getState();
+			this.#setPosition(this.#getTargetX(this.#targetState));
+			this.#setState(this.#targetState);
+		}
+		/**
 		* Sets the Switch track position without a CSS transition.
 		* @param {number} x The horizontal translation in pixels.
 		*/
@@ -408,6 +448,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			const { x } = (0, _fr0st_ui.getPosition)(e);
 			if (!Number.isFinite(x)) return false;
 			this.#cancelAnimation();
+			this.#dragActive = true;
 			this.#sliding = false;
 			this.#dragStartX = x;
 			this.#dragOffsetX = x - this.#currentX;

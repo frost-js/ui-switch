@@ -27,13 +27,17 @@ var Switch = class Switch extends BaseComponent {
 	#currentX = 0;
 	#divider;
 	#dividerWidth = 0;
+	#dragActive = false;
 	#dragOffsetX = 0;
 	#dragStartX = 0;
+	#form;
 	#generatedLabelIds = /* @__PURE__ */ new Map();
 	#hidden;
 	#offToggle;
 	#onToggle;
 	#outerContainer;
+	#pendingResets = /* @__PURE__ */ new Map();
+	#resetHandler;
 	#rtl = false;
 	#sliding = false;
 	#suppressClick = false;
@@ -50,6 +54,7 @@ var Switch = class Switch extends BaseComponent {
 	constructor(node, options) {
 		super(node, options);
 		this.#window = this.node.ownerDocument.defaultView;
+		this.#form = this.node.form;
 		this.#targetState = this.getState();
 		this.#render();
 		this.#refresh();
@@ -67,20 +72,24 @@ var Switch = class Switch extends BaseComponent {
 	dispose() {
 		this.#cancelAnimation();
 		this.#clearClickSuppression();
+		this.#pendingResets.clear();
 		for (const [label, id] of this.#generatedLabelIds) if ($.getAttribute(label, "id") === id) $.removeAttribute(label, "id");
 		$.remove(this.#outerContainer);
 		$.removeEvent(this.node, "focus.ui.switch");
 		$.removeEvent(this.node, "change.ui.switch");
+		if (this.#form) $.removeEvent(this.#form, "reset.ui.switch", this.#resetHandler);
 		if (this.#hidden) $.addClass(this.node, this.constructor.classes.hide);
 		else $.removeClass(this.node, this.constructor.classes.hide);
 		if (this.#tabIndex === null) $.removeAttribute(this.node, "tabindex");
 		else $.setAttribute(this.node, { tabindex: this.#tabIndex });
 		this.#container = null;
 		this.#divider = null;
+		this.#form = null;
 		this.#generatedLabelIds = null;
 		this.#offToggle = null;
 		this.#onToggle = null;
 		this.#outerContainer = null;
+		this.#resetHandler = null;
 		this.#window = null;
 		super.dispose();
 	}
@@ -138,7 +147,7 @@ var Switch = class Switch extends BaseComponent {
 		$.css(this.#container, "transform");
 		$.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
 		waitForTransition(this.#container, ["transform"]).then((_) => {
-			if (animationId !== this.#animationId || !this.node) return;
+			if (animationId !== this.#animationId || !this.node || [...this.#pendingResets].some(([event, resetAnimationId]) => resetAnimationId === animationId && !event.defaultPrevented)) return;
 			this.#animating = false;
 			this.#currentX = targetX;
 			$.setStyle(this.#outerContainer, { "--ui-switch-transition-scale": "" });
@@ -170,7 +179,14 @@ var Switch = class Switch extends BaseComponent {
 	* Completes a pointer drag and transitions to the nearest state.
 	*/
 	#endDrag() {
-		if (!this.node || !this.#sliding) return;
+		const dragActive = this.#dragActive;
+		this.#dragActive = false;
+		if (!this.node) return;
+		if (!dragActive) {
+			this.#suppressNextClick();
+			return;
+		}
+		if (!this.#sliding) return;
 		this.#sliding = false;
 		this.#suppressNextClick();
 		$.removeClass(this.#outerContainer, this.constructor.classes.dragging);
@@ -180,6 +196,17 @@ var Switch = class Switch extends BaseComponent {
 	* Attaches input, keyboard, click, mouse, and touch events.
 	*/
 	#events() {
+		if (this.#form) {
+			this.#resetHandler = (event) => {
+				const animationId = this.#animationId;
+				this.#pendingResets.set(event, animationId);
+				this.#window.setTimeout(() => {
+					this.#pendingResets.delete(event);
+					if (this.node && !event.defaultPrevented && animationId === this.#animationId) this.#resetState();
+				}, 0);
+			};
+			$.addEvent(this.#form, "reset.ui.switch", this.#resetHandler);
+		}
 		$.addEvent(this.node, "focus.ui.switch", (_) => {
 			$.focus(this.#outerContainer);
 		});
@@ -240,7 +267,7 @@ var Switch = class Switch extends BaseComponent {
 	* @param {MouseEvent|TouchEvent} e The pointer move event.
 	*/
 	#moveDrag(e) {
-		if (!this.node || this.#toggleWidth <= 0) return;
+		if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
 		const { x } = getPosition(e);
 		if (!Number.isFinite(x)) return;
 		if (!this.#sliding && Math.abs(x - this.#dragStartX) < Switch.#DRAG_THRESHOLD) return;
@@ -344,6 +371,19 @@ var Switch = class Switch extends BaseComponent {
 		$.before(this.node, this.#outerContainer);
 	}
 	/**
+	* Restores the rendered state after a native form reset.
+	*/
+	#resetState() {
+		this.#cancelAnimation();
+		this.#clearClickSuppression();
+		this.#dragActive = false;
+		this.#sliding = false;
+		$.removeClass(this.#outerContainer, this.constructor.classes.dragging);
+		this.#targetState = this.getState();
+		this.#setPosition(this.#getTargetX(this.#targetState));
+		this.#setState(this.#targetState);
+	}
+	/**
 	* Sets the Switch track position without a CSS transition.
 	* @param {number} x The horizontal translation in pixels.
 	*/
@@ -376,6 +416,7 @@ var Switch = class Switch extends BaseComponent {
 		const { x } = getPosition(e);
 		if (!Number.isFinite(x)) return false;
 		this.#cancelAnimation();
+		this.#dragActive = true;
 		this.#sliding = false;
 		this.#dragStartX = x;
 		this.#dragOffsetX = x - this.#currentX;

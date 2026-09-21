@@ -264,6 +264,8 @@ The underlying event type is `change`; fQuery exposes `event.namespace` as `ui.s
 
 A native checkbox `change` event also moves the rendered control to match the input, which keeps label activation and application-driven checkbox updates synchronized.
 
+After a native form reset, Switch restores the displayed and ARIA state to match the reset checkbox without animating or emitting a change event. Canceled resets leave the current interaction unchanged. Inputs associated with a form through the `form` attribute are also supported.
+
 ## fQuery API
 
 Importing Switch registers `switch` on `fQuery.QuerySet`:

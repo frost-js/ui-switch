@@ -28,13 +28,17 @@ export default class Switch extends BaseComponent {
     #currentX = 0;
     #divider;
     #dividerWidth = 0;
+    #dragActive = false;
     #dragOffsetX = 0;
     #dragStartX = 0;
+    #form;
     #generatedLabelIds = new Map;
     #hidden;
     #offToggle;
     #onToggle;
     #outerContainer;
+    #pendingResets = new Map;
+    #resetHandler;
     #rtl = false;
     #sliding = false;
     #suppressClick = false;
@@ -53,6 +57,7 @@ export default class Switch extends BaseComponent {
         super(node, options);
 
         this.#window = this.node.ownerDocument.defaultView;
+        this.#form = this.node.form;
         this.#targetState = this.getState();
 
         this.#render();
@@ -73,6 +78,7 @@ export default class Switch extends BaseComponent {
     dispose() {
         this.#cancelAnimation();
         this.#clearClickSuppression();
+        this.#pendingResets.clear();
 
         for (const [label, id] of this.#generatedLabelIds) {
             if ($.getAttribute(label, 'id') === id) {
@@ -83,6 +89,10 @@ export default class Switch extends BaseComponent {
         $.remove(this.#outerContainer);
         $.removeEvent(this.node, 'focus.ui.switch');
         $.removeEvent(this.node, 'change.ui.switch');
+
+        if (this.#form) {
+            $.removeEvent(this.#form, 'reset.ui.switch', this.#resetHandler);
+        }
 
         if (this.#hidden) {
             $.addClass(this.node, this.constructor.classes.hide);
@@ -98,10 +108,12 @@ export default class Switch extends BaseComponent {
 
         this.#container = null;
         this.#divider = null;
+        this.#form = null;
         this.#generatedLabelIds = null;
         this.#offToggle = null;
         this.#onToggle = null;
         this.#outerContainer = null;
+        this.#resetHandler = null;
         this.#window = null;
 
         super.dispose();
@@ -181,13 +193,22 @@ export default class Switch extends BaseComponent {
         $.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
 
         waitForTransition(this.#container, ['transform']).then((_) => {
-            if (animationId !== this.#animationId || !this.node) {
+            // A reset may have restored the checkbox before its deferred refresh.
+            if (
+                animationId !== this.#animationId ||
+                !this.node ||
+                [...this.#pendingResets].some(([event, resetAnimationId]) =>
+                    resetAnimationId === animationId && !event.defaultPrevented,
+                )
+            ) {
                 return;
             }
 
             this.#animating = false;
             this.#currentX = targetX;
+
             $.setStyle(this.#outerContainer, { '--ui-switch-transition-scale': '' });
+
             this.#setState(checked);
         });
     }
@@ -205,6 +226,7 @@ export default class Switch extends BaseComponent {
         const currentX = this.#getRenderedX();
 
         this.#animating = false;
+
         this.#setPosition(currentX);
         $.setStyle(this.#outerContainer, { '--ui-switch-transition-scale': '' });
     }
@@ -225,13 +247,27 @@ export default class Switch extends BaseComponent {
      * Completes a pointer drag and transitions to the nearest state.
      */
     #endDrag() {
-        if (!this.node || !this.#sliding) {
+        const dragActive = this.#dragActive;
+        this.#dragActive = false;
+
+        if (!this.node) {
+            return;
+        }
+
+        if (!dragActive) {
+            this.#suppressNextClick();
+            return;
+        }
+
+        if (!this.#sliding) {
             return;
         }
 
         this.#sliding = false;
         this.#suppressNextClick();
+
         $.removeClass(this.#outerContainer, this.constructor.classes.dragging);
+
         this.#animateState(this.#isCheckedPosition());
     }
 
@@ -239,6 +275,23 @@ export default class Switch extends BaseComponent {
      * Attaches input, keyboard, click, mouse, and touch events.
      */
     #events() {
+        if (this.#form) {
+            this.#resetHandler = (event) => {
+                const animationId = this.#animationId;
+                this.#pendingResets.set(event, animationId);
+
+                this.#window.setTimeout(() => {
+                    this.#pendingResets.delete(event);
+
+                    if (this.node && !event.defaultPrevented && animationId === this.#animationId) {
+                        this.#resetState();
+                    }
+                }, 0);
+            };
+
+            $.addEvent(this.#form, 'reset.ui.switch', this.#resetHandler);
+        }
+
         $.addEvent(this.node, 'focus.ui.switch', (_) => {
             $.focus(this.#outerContainer);
         });
@@ -346,7 +399,7 @@ export default class Switch extends BaseComponent {
      * @param {MouseEvent|TouchEvent} e The pointer move event.
      */
     #moveDrag(e) {
-        if (!this.node || this.#toggleWidth <= 0) {
+        if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) {
             return;
         }
 
@@ -376,6 +429,7 @@ export default class Switch extends BaseComponent {
         const maxX = this.#rtl ? this.#toggleWidth : 0;
 
         this.#currentX = $._clamp(x - this.#dragOffsetX, minX, maxX);
+
         $.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
     }
 
@@ -403,10 +457,10 @@ export default class Switch extends BaseComponent {
         const startX = this.#getTargetX(this.#targetState);
 
         $.setStyle(this.#outerContainer, { width: `${outerWidth}px` });
-        $.setStyle(this.#container, {
-            width: `${totalWidth}px`,
-        });
+        $.setStyle(this.#container, { width: `${totalWidth}px` });
+
         this.#setPosition(startX);
+
         $.setStyle(this.#onToggle, { width: `${this.#toggleWidth}px` });
         $.setStyle(this.#divider, { width: `${this.#dividerWidth}px` });
         $.setStyle(this.#offToggle, { width: `${this.#toggleWidth}px` });
@@ -511,6 +565,23 @@ export default class Switch extends BaseComponent {
     }
 
     /**
+     * Restores the rendered state after a native form reset.
+     */
+    #resetState() {
+        this.#cancelAnimation();
+        this.#clearClickSuppression();
+
+        this.#dragActive = false;
+        this.#sliding = false;
+
+        $.removeClass(this.#outerContainer, this.constructor.classes.dragging);
+
+        this.#targetState = this.getState();
+        this.#setPosition(this.#getTargetX(this.#targetState));
+        this.#setState(this.#targetState);
+    }
+
+    /**
      * Sets the Switch track position without a CSS transition.
      * @param {number} x The horizontal translation in pixels.
      */
@@ -561,9 +632,12 @@ export default class Switch extends BaseComponent {
         }
 
         this.#cancelAnimation();
+
+        this.#dragActive = true;
         this.#sliding = false;
         this.#dragStartX = x;
         this.#dragOffsetX = x - this.#currentX;
+
         $.focus(this.#outerContainer);
     }
 
@@ -572,6 +646,7 @@ export default class Switch extends BaseComponent {
      */
     #suppressNextClick() {
         this.#clearClickSuppression();
+
         this.#suppressClick = true;
         this.#suppressClickTimer = this.#window.setTimeout(
             (_) => this.#clearClickSuppression(),
