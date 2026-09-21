@@ -29,7 +29,6 @@ export default class Switch extends BaseComponent {
     #container;
     #currentX = 0;
     #divider;
-    #dividerWidth = 0;
     #dragActive = false;
     #dragOffsetX = 0;
     #dragStartX = 0;
@@ -230,7 +229,17 @@ export default class Switch extends BaseComponent {
             return;
         }
 
-        const currentX = this.#getRenderedX();
+        const transform = $.css(this.#container, 'transform');
+        let currentX = this.#currentX;
+
+        if (transform && transform !== 'none') {
+            const Matrix = window.DOMMatrixReadOnly || window.DOMMatrix;
+            const x = new Matrix(transform).m41;
+
+            if (Number.isFinite(x)) {
+                currentX = x;
+            }
+        }
 
         this.#animating = false;
 
@@ -273,7 +282,7 @@ export default class Switch extends BaseComponent {
 
         $.removeClass(this.#outerContainer, this.constructor.classes.dragging);
 
-        this.#animateState(this.#isCheckedPosition());
+        this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
     }
 
     /**
@@ -359,23 +368,6 @@ export default class Switch extends BaseComponent {
     }
 
     /**
-     * Gets the rendered horizontal translation of the Switch track.
-     * @returns {number} The rendered horizontal translation in pixels.
-     */
-    #getRenderedX() {
-        const transform = $.css(this.#container, 'transform');
-
-        if (!transform || transform === 'none') {
-            return this.#currentX;
-        }
-
-        const Matrix = window.DOMMatrixReadOnly || window.DOMMatrix;
-        const x = new Matrix(transform).m41;
-
-        return Number.isFinite(x) ? x : this.#currentX;
-    }
-
-    /**
      * Gets the translation for a checkbox state in the current text direction.
      * @param {boolean} checked Whether the checkbox is checked.
      * @returns {number} The horizontal translation in pixels.
@@ -386,17 +378,6 @@ export default class Switch extends BaseComponent {
         }
 
         return this.#rtl ? this.#toggleWidth : -this.#toggleWidth;
-    }
-
-    /**
-     * Determines which state is nearest to the current drag position.
-     * @returns {boolean} Whether the checked state is nearest.
-     */
-    #isCheckedPosition() {
-        const checkedDistance = Math.abs(this.#currentX - this.#getTargetX(true));
-        const uncheckedDistance = Math.abs(this.#currentX - this.#getTargetX(false));
-
-        return checkedDistance < uncheckedDistance;
     }
 
     /**
@@ -443,12 +424,13 @@ export default class Switch extends BaseComponent {
      */
     #refresh() {
         const labelWidth = Number(this.options.labelWidth);
-        const measuredOnWidth = Number($.width(this.#onToggle)) || 0;
-        const measuredOffWidth = Number($.width(this.#offToggle)) || 0;
 
         this.#toggleWidth = Number.isFinite(labelWidth) && labelWidth > 0 ?
             labelWidth :
-            Math.max(measuredOnWidth, measuredOffWidth);
+            Math.max(
+                Number($.width(this.#onToggle)) || 0,
+                Number($.width(this.#offToggle)) || 0,
+            );
 
         if (this.#toggleWidth <= 0) {
             if (!this.#resizeObserver) {
@@ -464,13 +446,13 @@ export default class Switch extends BaseComponent {
             return;
         }
 
-        const dividerWidth = Number(this.options.dividerWidth);
-        this.#dividerWidth = Number.isFinite(dividerWidth) && dividerWidth > 0 ?
-            dividerWidth :
+        const configuredDividerWidth = Number(this.options.dividerWidth);
+        const dividerWidth = Number.isFinite(configuredDividerWidth) && configuredDividerWidth > 0 ?
+            configuredDividerWidth :
             this.#toggleWidth / 2;
 
-        const outerWidth = this.#toggleWidth + this.#dividerWidth;
-        const totalWidth = (this.#toggleWidth * 2) + this.#dividerWidth;
+        const outerWidth = this.#toggleWidth + dividerWidth;
+        const totalWidth = (this.#toggleWidth * 2) + dividerWidth;
 
         this.#rtl = $.css(this.#outerContainer, 'direction') === 'rtl';
         const startX = this.#getTargetX(this.#targetState);
@@ -481,7 +463,7 @@ export default class Switch extends BaseComponent {
         this.#setPosition(startX);
 
         $.setStyle(this.#onToggle, { width: `${this.#toggleWidth}px` });
-        $.setStyle(this.#divider, { width: `${this.#dividerWidth}px` });
+        $.setStyle(this.#divider, { width: `${dividerWidth}px` });
         $.setStyle(this.#offToggle, { width: `${this.#toggleWidth}px` });
 
         this.#resizeObserver?.disconnect();

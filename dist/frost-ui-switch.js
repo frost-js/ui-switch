@@ -59,7 +59,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#container;
 		#currentX = 0;
 		#divider;
-		#dividerWidth = 0;
 		#dragActive = false;
 		#dragOffsetX = 0;
 		#dragStartX = 0;
@@ -193,7 +192,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#cancelAnimation() {
 			this.#animationId++;
 			if (!this.#animating || !this.#container) return;
-			const currentX = this.#getRenderedX();
+			const transform = _fr0st_query.default.css(this.#container, "transform");
+			let currentX = this.#currentX;
+			if (transform && transform !== "none") {
+				const x = new (window.DOMMatrixReadOnly || window.DOMMatrix)(transform).m41;
+				if (Number.isFinite(x)) currentX = x;
+			}
 			this.#animating = false;
 			this.#setPosition(currentX);
 			_fr0st_query.default.setStyle(this.#outerContainer, { "--ui-switch-transition-scale": "" });
@@ -222,7 +226,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#sliding = false;
 			this.#suppressNextClick();
 			_fr0st_query.default.removeClass(this.#outerContainer, this.constructor.classes.dragging);
-			this.#animateState(this.#isCheckedPosition());
+			this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
 		}
 		/**
 		* Attaches input, keyboard, click, mouse, and touch events.
@@ -269,16 +273,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.addEvent(this.#outerContainer, "mousedown.ui.switch touchstart.ui.switch", dragEvent);
 		}
 		/**
-		* Gets the rendered horizontal translation of the Switch track.
-		* @returns {number} The rendered horizontal translation in pixels.
-		*/
-		#getRenderedX() {
-			const transform = _fr0st_query.default.css(this.#container, "transform");
-			if (!transform || transform === "none") return this.#currentX;
-			const x = new (window.DOMMatrixReadOnly || window.DOMMatrix)(transform).m41;
-			return Number.isFinite(x) ? x : this.#currentX;
-		}
-		/**
 		* Gets the translation for a checkbox state in the current text direction.
 		* @param {boolean} checked Whether the checkbox is checked.
 		* @returns {number} The horizontal translation in pixels.
@@ -286,13 +280,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#getTargetX(checked) {
 			if (checked) return 0;
 			return this.#rtl ? this.#toggleWidth : -this.#toggleWidth;
-		}
-		/**
-		* Determines which state is nearest to the current drag position.
-		* @returns {boolean} Whether the checked state is nearest.
-		*/
-		#isCheckedPosition() {
-			return Math.abs(this.#currentX - this.#getTargetX(true)) < Math.abs(this.#currentX - this.#getTargetX(false));
 		}
 		/**
 		* Updates the Switch position for an active pointer drag.
@@ -318,9 +305,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#refresh() {
 			const labelWidth = Number(this.options.labelWidth);
-			const measuredOnWidth = Number(_fr0st_query.default.width(this.#onToggle)) || 0;
-			const measuredOffWidth = Number(_fr0st_query.default.width(this.#offToggle)) || 0;
-			this.#toggleWidth = Number.isFinite(labelWidth) && labelWidth > 0 ? labelWidth : Math.max(measuredOnWidth, measuredOffWidth);
+			this.#toggleWidth = Number.isFinite(labelWidth) && labelWidth > 0 ? labelWidth : Math.max(Number(_fr0st_query.default.width(this.#onToggle)) || 0, Number(_fr0st_query.default.width(this.#offToggle)) || 0);
 			if (this.#toggleWidth <= 0) {
 				if (!this.#resizeObserver) {
 					this.#resizeObserver = new window.ResizeObserver(() => {
@@ -330,17 +315,17 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				}
 				return;
 			}
-			const dividerWidth = Number(this.options.dividerWidth);
-			this.#dividerWidth = Number.isFinite(dividerWidth) && dividerWidth > 0 ? dividerWidth : this.#toggleWidth / 2;
-			const outerWidth = this.#toggleWidth + this.#dividerWidth;
-			const totalWidth = this.#toggleWidth * 2 + this.#dividerWidth;
+			const configuredDividerWidth = Number(this.options.dividerWidth);
+			const dividerWidth = Number.isFinite(configuredDividerWidth) && configuredDividerWidth > 0 ? configuredDividerWidth : this.#toggleWidth / 2;
+			const outerWidth = this.#toggleWidth + dividerWidth;
+			const totalWidth = this.#toggleWidth * 2 + dividerWidth;
 			this.#rtl = _fr0st_query.default.css(this.#outerContainer, "direction") === "rtl";
 			const startX = this.#getTargetX(this.#targetState);
 			_fr0st_query.default.setStyle(this.#outerContainer, { width: `${outerWidth}px` });
 			_fr0st_query.default.setStyle(this.#container, { width: `${totalWidth}px` });
 			this.#setPosition(startX);
 			_fr0st_query.default.setStyle(this.#onToggle, { width: `${this.#toggleWidth}px` });
-			_fr0st_query.default.setStyle(this.#divider, { width: `${this.#dividerWidth}px` });
+			_fr0st_query.default.setStyle(this.#divider, { width: `${dividerWidth}px` });
 			_fr0st_query.default.setStyle(this.#offToggle, { width: `${this.#toggleWidth}px` });
 			this.#resizeObserver?.disconnect();
 			this.#resizeObserver = null;
