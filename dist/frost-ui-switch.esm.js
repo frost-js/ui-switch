@@ -28,8 +28,6 @@ var Switch = class Switch extends BaseComponent {
 	#currentX = 0;
 	#divider;
 	#dragActive = false;
-	#dragOffsetX = 0;
-	#dragStartX = 0;
 	#form;
 	#generatedLabelIds = /* @__PURE__ */ new Map();
 	#hidden;
@@ -180,23 +178,6 @@ var Switch = class Switch extends BaseComponent {
 		}
 	}
 	/**
-	* Completes a pointer drag and transitions to the nearest state.
-	*/
-	#endDrag() {
-		const dragActive = this.#dragActive;
-		this.#dragActive = false;
-		if (!this.node) return;
-		if (!dragActive) {
-			this.#suppressNextClick();
-			return;
-		}
-		if (!this.#sliding) return;
-		this.#sliding = false;
-		this.#suppressNextClick();
-		$.removeClass(this.#outerContainer, this.constructor.classes.dragging);
-		this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
-	}
-	/**
 	* Attaches input, keyboard, click, mouse, and touch events.
 	*/
 	#events() {
@@ -233,7 +214,46 @@ var Switch = class Switch extends BaseComponent {
 			$.focus(this.#outerContainer);
 			this.toggleState();
 		});
-		const dragEvent = $.mouseDragFactory((e) => this.#startDrag(e), (e) => this.#moveDrag(e), (_) => this.#endDrag(), {
+		let dragStartX = 0;
+		let dragOffsetX = 0;
+		const dragEvent = $.mouseDragFactory((e) => {
+			if (!this.node || e.type === "mousedown" && e.button !== 0 || $.is(this.node, ":disabled")) return false;
+			const { x } = getPosition(e);
+			if (!Number.isFinite(x)) return false;
+			this.#cancelAnimation();
+			this.#dragActive = true;
+			this.#sliding = false;
+			dragStartX = x;
+			dragOffsetX = x - this.#currentX;
+			$.focus(this.#outerContainer);
+		}, (e) => {
+			if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
+			const { x } = getPosition(e);
+			if (!Number.isFinite(x)) return;
+			if (!this.#sliding && Math.abs(x - dragStartX) < Switch.#DRAG_THRESHOLD) return;
+			if (!this.#sliding) {
+				this.#sliding = true;
+				$.addClass(this.#outerContainer, this.constructor.classes.dragging);
+			}
+			if (e.cancelable) e.preventDefault();
+			const minX = this.#rtl ? 0 : -this.#toggleWidth;
+			const maxX = this.#rtl ? this.#toggleWidth : 0;
+			this.#currentX = $._clamp(x - dragOffsetX, minX, maxX);
+			$.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
+		}, (_) => {
+			const dragActive = this.#dragActive;
+			this.#dragActive = false;
+			if (!this.node) return;
+			if (!dragActive) {
+				this.#suppressNextClick();
+				return;
+			}
+			if (!this.#sliding) return;
+			this.#sliding = false;
+			this.#suppressNextClick();
+			$.removeClass(this.#outerContainer, this.constructor.classes.dragging);
+			this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
+		}, {
 			debounce: false,
 			passive: false,
 			preventDefault: false
@@ -248,25 +268,6 @@ var Switch = class Switch extends BaseComponent {
 	#getTargetX(checked) {
 		if (checked) return 0;
 		return this.#rtl ? this.#toggleWidth : -this.#toggleWidth;
-	}
-	/**
-	* Updates the Switch position for an active pointer drag.
-	* @param {MouseEvent|TouchEvent} e The pointer move event.
-	*/
-	#moveDrag(e) {
-		if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
-		const { x } = getPosition(e);
-		if (!Number.isFinite(x)) return;
-		if (!this.#sliding && Math.abs(x - this.#dragStartX) < Switch.#DRAG_THRESHOLD) return;
-		if (!this.#sliding) {
-			this.#sliding = true;
-			$.addClass(this.#outerContainer, this.constructor.classes.dragging);
-		}
-		if (e.cancelable) e.preventDefault();
-		const minX = this.#rtl ? 0 : -this.#toggleWidth;
-		const maxX = this.#rtl ? this.#toggleWidth : 0;
-		this.#currentX = $._clamp(x - this.#dragOffsetX, minX, maxX);
-		$.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
 	}
 	/**
 	* Measures and positions the rendered Switch for the current text direction.
@@ -401,22 +402,6 @@ var Switch = class Switch extends BaseComponent {
 		if (this.getState() === checked) return;
 		$.setProperty(this.node, { checked });
 		$.triggerEvent(this.node, "change.ui.switch", { data: { skipUpdate: true } });
-	}
-	/**
-	* Starts tracking a mouse or touch drag from the current Switch position.
-	* @param {MouseEvent|TouchEvent} e The pointer down event.
-	* @returns {boolean|undefined} `false` when the drag must not start.
-	*/
-	#startDrag(e) {
-		if (!this.node || e.type === "mousedown" && e.button !== 0 || $.is(this.node, ":disabled")) return false;
-		const { x } = getPosition(e);
-		if (!Number.isFinite(x)) return false;
-		this.#cancelAnimation();
-		this.#dragActive = true;
-		this.#sliding = false;
-		this.#dragStartX = x;
-		this.#dragOffsetX = x - this.#currentX;
-		$.focus(this.#outerContainer);
 	}
 	/**
 	* Suppresses the click generated after a completed mouse or touch drag.

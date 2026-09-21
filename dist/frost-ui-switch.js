@@ -60,8 +60,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#currentX = 0;
 		#divider;
 		#dragActive = false;
-		#dragOffsetX = 0;
-		#dragStartX = 0;
 		#form;
 		#generatedLabelIds = /* @__PURE__ */ new Map();
 		#hidden;
@@ -212,23 +210,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			}
 		}
 		/**
-		* Completes a pointer drag and transitions to the nearest state.
-		*/
-		#endDrag() {
-			const dragActive = this.#dragActive;
-			this.#dragActive = false;
-			if (!this.node) return;
-			if (!dragActive) {
-				this.#suppressNextClick();
-				return;
-			}
-			if (!this.#sliding) return;
-			this.#sliding = false;
-			this.#suppressNextClick();
-			_fr0st_query.default.removeClass(this.#outerContainer, this.constructor.classes.dragging);
-			this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
-		}
-		/**
 		* Attaches input, keyboard, click, mouse, and touch events.
 		*/
 		#events() {
@@ -265,7 +246,46 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				_fr0st_query.default.focus(this.#outerContainer);
 				this.toggleState();
 			});
-			const dragEvent = _fr0st_query.default.mouseDragFactory((e) => this.#startDrag(e), (e) => this.#moveDrag(e), (_) => this.#endDrag(), {
+			let dragStartX = 0;
+			let dragOffsetX = 0;
+			const dragEvent = _fr0st_query.default.mouseDragFactory((e) => {
+				if (!this.node || e.type === "mousedown" && e.button !== 0 || _fr0st_query.default.is(this.node, ":disabled")) return false;
+				const { x } = (0, _fr0st_ui.getPosition)(e);
+				if (!Number.isFinite(x)) return false;
+				this.#cancelAnimation();
+				this.#dragActive = true;
+				this.#sliding = false;
+				dragStartX = x;
+				dragOffsetX = x - this.#currentX;
+				_fr0st_query.default.focus(this.#outerContainer);
+			}, (e) => {
+				if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
+				const { x } = (0, _fr0st_ui.getPosition)(e);
+				if (!Number.isFinite(x)) return;
+				if (!this.#sliding && Math.abs(x - dragStartX) < Switch.#DRAG_THRESHOLD) return;
+				if (!this.#sliding) {
+					this.#sliding = true;
+					_fr0st_query.default.addClass(this.#outerContainer, this.constructor.classes.dragging);
+				}
+				if (e.cancelable) e.preventDefault();
+				const minX = this.#rtl ? 0 : -this.#toggleWidth;
+				const maxX = this.#rtl ? this.#toggleWidth : 0;
+				this.#currentX = _fr0st_query.default._clamp(x - dragOffsetX, minX, maxX);
+				_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
+			}, (_) => {
+				const dragActive = this.#dragActive;
+				this.#dragActive = false;
+				if (!this.node) return;
+				if (!dragActive) {
+					this.#suppressNextClick();
+					return;
+				}
+				if (!this.#sliding) return;
+				this.#sliding = false;
+				this.#suppressNextClick();
+				_fr0st_query.default.removeClass(this.#outerContainer, this.constructor.classes.dragging);
+				this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
+			}, {
 				debounce: false,
 				passive: false,
 				preventDefault: false
@@ -280,25 +300,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#getTargetX(checked) {
 			if (checked) return 0;
 			return this.#rtl ? this.#toggleWidth : -this.#toggleWidth;
-		}
-		/**
-		* Updates the Switch position for an active pointer drag.
-		* @param {MouseEvent|TouchEvent} e The pointer move event.
-		*/
-		#moveDrag(e) {
-			if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
-			const { x } = (0, _fr0st_ui.getPosition)(e);
-			if (!Number.isFinite(x)) return;
-			if (!this.#sliding && Math.abs(x - this.#dragStartX) < Switch.#DRAG_THRESHOLD) return;
-			if (!this.#sliding) {
-				this.#sliding = true;
-				_fr0st_query.default.addClass(this.#outerContainer, this.constructor.classes.dragging);
-			}
-			if (e.cancelable) e.preventDefault();
-			const minX = this.#rtl ? 0 : -this.#toggleWidth;
-			const maxX = this.#rtl ? this.#toggleWidth : 0;
-			this.#currentX = _fr0st_query.default._clamp(x - this.#dragOffsetX, minX, maxX);
-			_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
 		}
 		/**
 		* Measures and positions the rendered Switch for the current text direction.
@@ -433,22 +434,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (this.getState() === checked) return;
 			_fr0st_query.default.setProperty(this.node, { checked });
 			_fr0st_query.default.triggerEvent(this.node, "change.ui.switch", { data: { skipUpdate: true } });
-		}
-		/**
-		* Starts tracking a mouse or touch drag from the current Switch position.
-		* @param {MouseEvent|TouchEvent} e The pointer down event.
-		* @returns {boolean|undefined} `false` when the drag must not start.
-		*/
-		#startDrag(e) {
-			if (!this.node || e.type === "mousedown" && e.button !== 0 || _fr0st_query.default.is(this.node, ":disabled")) return false;
-			const { x } = (0, _fr0st_ui.getPosition)(e);
-			if (!Number.isFinite(x)) return false;
-			this.#cancelAnimation();
-			this.#dragActive = true;
-			this.#sliding = false;
-			this.#dragStartX = x;
-			this.#dragOffsetX = x - this.#currentX;
-			_fr0st_query.default.focus(this.#outerContainer);
 		}
 		/**
 		* Suppresses the click generated after a completed mouse or touch drag.
