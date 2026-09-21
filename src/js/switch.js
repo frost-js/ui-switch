@@ -22,6 +22,30 @@ const window = $.getWindow();
  * @augments {BaseComponent<SwitchOptions>}
  */
 export default class Switch extends BaseComponent {
+    static classes = {
+        disabled: 'switch-disabled',
+        dragging: 'switch-dragging',
+        hide: 'visually-hidden',
+        outer: 'switch-outer',
+        switch: 'switch',
+        toggleDivider: 'switch-toggle-divider',
+        toggleOff: 'switch-toggle-off',
+        toggleOn: 'switch-toggle-on',
+    };
+    /** @type {SwitchOptions} */
+    static defaults = {
+        size: 'md',
+        onStyle: 'text-bg-primary',
+        offStyle: 'text-bg-secondary',
+        dividerStyle: 'bg-body-tertiary',
+        onText: 'ON',
+        offText: 'OFF',
+        labelWidth: null,
+        dividerWidth: null,
+        animate: true,
+        duration: 500,
+    };
+
     static #DRAG_THRESHOLD = 3;
 
     #animating = false;

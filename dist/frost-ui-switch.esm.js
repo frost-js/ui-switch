@@ -21,6 +21,29 @@ var window = $.getWindow();
 * @augments {BaseComponent<SwitchOptions>}
 */
 var Switch = class Switch extends BaseComponent {
+	static classes = {
+		disabled: "switch-disabled",
+		dragging: "switch-dragging",
+		hide: "visually-hidden",
+		outer: "switch-outer",
+		switch: "switch",
+		toggleDivider: "switch-toggle-divider",
+		toggleOff: "switch-toggle-off",
+		toggleOn: "switch-toggle-on"
+	};
+	/** @type {SwitchOptions} */
+	static defaults = {
+		size: "md",
+		onStyle: "text-bg-primary",
+		offStyle: "text-bg-secondary",
+		dividerStyle: "bg-body-tertiary",
+		onText: "ON",
+		offText: "OFF",
+		labelWidth: null,
+		dividerWidth: null,
+		animate: true,
+		duration: 500
+	};
 	static #DRAG_THRESHOLD = 3;
 	#animating = false;
 	#animationId = 0;
@@ -414,30 +437,6 @@ var Switch = class Switch extends BaseComponent {
 
 //#endregion
 //#region src/js/index.js
-/** @import { SwitchOptions } from './switch.js'; */
-/** @type {SwitchOptions} */
-Switch.defaults = {
-	size: "md",
-	onStyle: "text-bg-primary",
-	offStyle: "text-bg-secondary",
-	dividerStyle: "bg-body-tertiary",
-	onText: "ON",
-	offText: "OFF",
-	labelWidth: null,
-	dividerWidth: null,
-	animate: true,
-	duration: 500
-};
-Switch.classes = {
-	disabled: "switch-disabled",
-	dragging: "switch-dragging",
-	hide: "visually-hidden",
-	outer: "switch-outer",
-	switch: "switch",
-	toggleDivider: "switch-toggle-divider",
-	toggleOff: "switch-toggle-off",
-	toggleOn: "switch-toggle-on"
-};
 initComponent("switch", Switch);
 var js_default = Switch;
 
