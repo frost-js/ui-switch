@@ -7,14 +7,14 @@ const window = $.getWindow();
  * @typedef {object} SwitchOptions
  * @property {boolean} [animate=true] Whether to transition state changes.
  * @property {string} [dividerStyle='bg-body-tertiary'] The class applied to the divider.
- * @property {number|null} [dividerWidth=null] The divider width in pixels, or `null` to derive it from the label width.
+ * @property {number|null} [dividerWidth=null] The divider width in pixels, or `null` to use half the resolved label width.
  * @property {number} [duration=500] The full CSS transition duration in milliseconds.
- * @property {number|null} [labelWidth=null] The label width in pixels, or `null` to measure the labels.
+ * @property {number|null} [labelWidth=null] The width of both labels in pixels, or `null` to use the wider measured label.
  * @property {string} [offStyle='text-bg-secondary'] The class applied to the off label.
  * @property {string} [offText='OFF'] The off label text.
  * @property {string} [onStyle='text-bg-primary'] The class applied to the on label.
  * @property {string} [onText='ON'] The on label text.
- * @property {string} [size='md'] The switch size suffix.
+ * @property {'xs'|'sm'|'md'|'lg'|'xl'} [size='md'] The switch size suffix.
  */
 
 /**
@@ -156,7 +156,7 @@ export default class Switch extends BaseComponent {
     }
 
     /**
-     * Gets the checkbox state.
+     * Gets the current checkbox state. Animated state changes are committed when the transition finishes.
      * @returns {boolean} Whether the checkbox is checked.
      */
     getState() {
@@ -164,7 +164,8 @@ export default class Switch extends BaseComponent {
     }
 
     /**
-     * Sets the checkbox state.
+     * Transitions to the requested checkbox state, committing it when the transition finishes.
+     * Updates immediately when no transition is needed. Calls during an active slide are ignored.
      * @param {boolean} checked Whether the checkbox is checked.
      */
     setState(checked) {
@@ -172,7 +173,9 @@ export default class Switch extends BaseComponent {
     }
 
     /**
-     * Toggles the checkbox state.
+     * Transitions to the opposite target state, reversing any pending state change.
+     * Commits the checkbox state when the transition finishes, or immediately when no transition is needed.
+     * Calls during an active slide are ignored.
      */
     toggleState() {
         this.#animateState(!this.#targetState);
