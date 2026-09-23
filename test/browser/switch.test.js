@@ -213,6 +213,24 @@ test.describe('Switch', () => {
             await expect(page.locator('.switch-outer')).toHaveCount(1);
         });
 
+        test('allows repeated disposal without affecting a new instance', async ({ page }) => {
+            expect(await page.evaluate((_) => {
+                const input = $.findOne('#switch');
+                const first = UI.Switch.init(input, { animate: false });
+                first.dispose();
+                first.dispose();
+
+                const second = UI.Switch.init(input, { animate: false });
+                first.dispose();
+                return first.node === null && first.options === null &&
+                    $.getData(input, 'switch') === second;
+            })).toBe(true);
+
+            await expect(page.locator('.switch-outer')).toHaveCount(1);
+            await page.locator('.switch-outer').click();
+            await expect(page.locator('#switch')).toBeChecked();
+        });
+
         test('disposes safely after a touch interrupts an animation', async ({ page }) => {
             const errors = [];
             page.on('pageerror', (error) => errors.push(error.message));

@@ -115,7 +115,7 @@ export default class Switch extends BaseComponent {
 
         this.#resizeObserver?.disconnect();
 
-        for (const [label, id] of this.#generatedLabelIds) {
+        for (const [label, id] of this.#generatedLabelIds || []) {
             if ($.getAttribute(label, 'id') === id) {
                 $.removeAttribute(label, 'id');
             }

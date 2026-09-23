@@ -97,7 +97,7 @@ var Switch = class Switch extends BaseComponent {
 		this.#clearClickSuppression();
 		this.#pendingResets.clear();
 		this.#resizeObserver?.disconnect();
-		for (const [label, id] of this.#generatedLabelIds) if ($.getAttribute(label, "id") === id) $.removeAttribute(label, "id");
+		for (const [label, id] of this.#generatedLabelIds || []) if ($.getAttribute(label, "id") === id) $.removeAttribute(label, "id");
 		$.remove(this.#outerContainer);
 		$.removeEvent(this.node, "focus.ui.switch");
 		$.removeEvent(this.node, "change.ui.switch");

@@ -129,7 +129,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#clearClickSuppression();
 			this.#pendingResets.clear();
 			this.#resizeObserver?.disconnect();
-			for (const [label, id] of this.#generatedLabelIds) if (_fr0st_query.default.getAttribute(label, "id") === id) _fr0st_query.default.removeAttribute(label, "id");
+			for (const [label, id] of this.#generatedLabelIds || []) if (_fr0st_query.default.getAttribute(label, "id") === id) _fr0st_query.default.removeAttribute(label, "id");
 			_fr0st_query.default.remove(this.#outerContainer);
 			_fr0st_query.default.removeEvent(this.node, "focus.ui.switch");
 			_fr0st_query.default.removeEvent(this.node, "change.ui.switch");
