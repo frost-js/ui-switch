@@ -15,7 +15,7 @@ Accessible toggle-switch control for Frost UI with configurable labels, semantic
 - Native checkbox remains the form control and source of truth
 - Click, Space, Enter, mouse drag, and touch drag interaction
 - Five Frost UI sizes with configurable text, semantic classes, and widths
-- Frost UI v3 light, dark, system, focus, disabled, and RTL presentation
+- Frost UI v4 light, dark, system, focus, disabled, and RTL presentation
 - Accessible switch role, state, required state, disabled state, and label association
 - Existing-instance reuse with frozen resolved options
 - Native `Switch` class and `switch` fQuery plugin
@@ -28,7 +28,7 @@ Accessible toggle-switch control for Frost UI with configurable labels, semantic
 
 ### Browser projects / bundlers
 
-Install Switch with its Frost UI and fQuery peers:
+Install Switch with its Frost UI v4 and fQuery v5 peers:
 
 ```bash
 npm i @fr0st/ui-switch @fr0st/ui @fr0st/query
@@ -50,7 +50,7 @@ const notifications = Switch.init(
 );
 ```
 
-`@fr0st/ui` and `@fr0st/query` are peer dependencies so the component shares the application's UI and fQuery instances. The package root, `dist/*`, and `src/*` are available through package exports.
+Switch v3 requires `@fr0st/ui ^4.0.0` and `@fr0st/query ^5.0.0` as peer dependencies so the component shares the application's UI and fQuery instances. The package root, `dist/*`, and `src/*` are available through package exports.
 
 Switch requires a browser DOM or a compatible DOM environment configured through fQuery. Server-rendered applications should load the component on the client.
 
@@ -105,6 +105,8 @@ Load Frost UI's all-in-one bundle before Switch. The UI bundle supplies both the
 
 The UMD bundle adds `Switch` to the existing `globalThis.UI` object. It expects `globalThis.UI` and `globalThis.fQuery` to exist before it loads. If the non-bundled Frost UI build is used instead, load fQuery, Frost UI, and Switch in that order.
 
+Do not load the separate fQuery script when using `frost-ui-bundle.js` or `frost-ui-bundle.min.js`.
+
 ## Usage
 
 Start with a normal checkbox and an explicit or wrapping label. Switch inserts the visible control immediately before the input and visually hides the original checkbox while keeping it synchronized for forms:
@@ -142,11 +144,20 @@ Calling `Switch.init()` again for the same input returns its existing instance. 
 
 Options are resolved in this order:
 
-1. Component defaults
+1. `Switch.defaults`
 2. The input's `data-ui-*` attributes
 3. Options passed to `Switch.init()`
 
 Resolved `instance.options` are frozen.
+
+`Switch.defaults` and `Switch.classes` are static properties defined on the class. Set application-wide defaults before initializing components:
+
+```js
+Switch.defaults.size = 'sm';
+Switch.defaults.duration = 240;
+```
+
+Changes to defaults apply to newly created instances. `Switch.classes` contains the structural and state class names used by the component; custom names need matching CSS and should be configured before initialization.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -176,7 +187,7 @@ const switchControl = Switch.init(node, {
 });
 ```
 
-Invalid, non-positive, or absent widths fall back to measured dimensions. Invalid or non-positive durations update the component immediately.
+Invalid, non-positive, or absent `labelWidth` values fall back to the wider measured label. Invalid, non-positive, or absent `dividerWidth` values use half the resolved label width. Invalid or non-positive durations update the component immediately.
 
 If Switch is initialized while hidden, automatic sizing waits until the control becomes measurable. A temporary resize observer refreshes the layout when it appears, then disconnects. Explicit positive `labelWidth` values are applied immediately.
 
@@ -223,16 +234,16 @@ The `data-ui-toggle` attribute does not initialize Switch by itself.
 | Method | Returns | Description |
 | --- | --- | --- |
 | `Switch.init(node, options?)` | `Switch` | Return the existing instance for an input or create one. |
-| `disable()` | `void` | Disable the checkbox and make the rendered switch unavailable and unfocusable. |
+| `disable()` | `void` | Disable the checkbox, cancel any active drag, and make the rendered switch unavailable and unfocusable. |
 | `dispose()` | `void` | Remove generated markup and events, unregister component state, and restore the original input. |
-| `enable()` | `void` | Enable the checkbox and restore rendered switch interaction. |
+| `enable()` | `void` | Remove the checkbox's disabled attribute and refresh the rendered disabled state. |
 | `getState()` | `boolean` | Return whether the original checkbox is checked. |
 | `setState(checked)` | `void` | Normalize the value to a boolean and move to that state. |
 | `toggleState()` | `void` | Move to the opposite target state. |
 
 ```js
 switchControl.setState(true);
-console.log(switchControl.getState()); // true
+// With animation enabled, getState() updates when the transition completes.
 
 switchControl.toggleState();
 switchControl.disable();
@@ -241,6 +252,8 @@ switchControl.dispose();
 ```
 
 An instance also exposes its original input as `instance.node` and its frozen resolved configuration as `instance.options`. Both become `null` after disposal.
+
+Calling `disable()` during a drag restores the displayed position to the checkbox's current state without emitting a change event. Further movement and release from that drag do not toggle the checkbox.
 
 ## Events
 
@@ -264,9 +277,9 @@ $.addEvent(
 
 The underlying event type is `change`; fQuery exposes `event.namespace` as `ui.switch`. Setting the current state again does not emit another event. When transitions are enabled, the checkbox, ARIA state, and event update when the transition reaches its final position.
 
-A native checkbox `change` event also moves the rendered control to match the input, which keeps label activation and application-driven checkbox updates synchronized.
+A native checkbox `change` event also moves the rendered control to match the input when no drag is active. Assigning `input.checked` alone does not notify Switch; use `setState()` or dispatch a native `change` event after assigning it.
 
-After a native form reset, Switch restores the displayed and ARIA state to match the reset checkbox without animating or emitting a change event. Canceled resets leave the current interaction unchanged. Inputs associated with a form through the `form` attribute are also supported.
+After a native form reset, Switch defers its refresh until the checkbox has reset, then restores the displayed and ARIA state without animating or emitting a change event. The refresh cancels active dragging or animation. Canceled resets leave the current interaction unchanged, and an explicit state change requested after the reset takes precedence. Inputs associated with a form through the `form` attribute are also supported.
 
 ## fQuery API
 
@@ -307,7 +320,7 @@ Applications remain responsible for a meaningful visible label, instructions, va
 
 ## Themes and RTL
 
-Switch combines its component stylesheet with Frost UI v3 CSS custom properties, focus-ring tokens, semantic text/background utilities, and disabled opacity. Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly:
+Switch combines its component stylesheet with Frost UI v4 CSS custom properties, focus-ring tokens, semantic text/background utilities, and disabled opacity. Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly:
 
 ```html
 <section data-ui-theme="dark">
@@ -328,7 +341,7 @@ In RTL layouts, the visual positions and physical drag direction are mirrored wh
 
 ## Disposal
 
-`dispose()` removes the rendered switch, component events, pending transition, drag click suppression, and registered fQuery component data. It restores the original input's pre-existing visually-hidden state and `tabindex` while preserving unrelated or runtime-added classes.
+`dispose()` removes the rendered switch, component events (including the form reset listener), pending transition, drag click suppression, and registered fQuery component data. It disconnects any pending resize observer and ignores deferred reset work. It restores the original input's pre-existing visually-hidden state and `tabindex` while preserving unrelated or runtime-added classes.
 
 Generated label IDs are removed only when they still contain the component-generated value. Existing IDs and IDs changed by the application remain untouched. The input's current checked and disabled state are preserved.
 
@@ -347,10 +360,12 @@ const compactSwitch = Switch.init(node, { size: 'sm' });
 - UMD consumers should continue loading Frost UI's bundle first, then `frost-ui-switch.js`; the component extends the existing `globalThis.UI` namespace.
 - Replace unsupported internal `_node` and `_options` access with the public `node` and `options` getters.
 - Do not import legacy prototype or wrapper source paths. Use the package root, `dist/*`, or supported `src/*` exports.
-- Public option names, class names, and methods remain available. v3 additionally fixes label association, disposal restoration, interrupted transitions, zero-size layouts, touch dragging, and RTL movement.
+- Public option names, class names, and methods remain available. v3 additionally fixes label association, disposal restoration, interrupted transitions, native form resets, hidden initialization, disabling during a drag, and RTL movement.
 - Development requires Node `^20.19.0`, `^22.13.0`, or `>=24`.
 
 ## Development
+
+Use Node.js matching `^20.19.0 || ^22.13.0 || >=24`. Install dependencies with `npm ci`, then install Playwright browsers with `npx playwright install --with-deps`.
 
 ```bash
 npm test
@@ -358,7 +373,13 @@ npm run lint
 npm run build
 ```
 
-`npm test` builds the bundles and runs the Playwright suite in Chromium, Firefox, and WebKit. Install exact dependencies with `npm ci`. Run `npm run lint:sass:unused` to check Sass variables, `npm run test:coverage` to generate coverage, `npm run test:headed` for headed browsers, or `npm run test:ui` for Playwright's interactive runner.
+`npm test` rebuilds JavaScript and CSS, then runs the Playwright suite in Chromium, Firefox, and WebKit. `npm run test:browser` runs the suite against the existing bundles, so rebuild after changing source files.
+
+After building, `npm run test:coverage` runs Chromium tests and writes coverage reports to `coverage/`.
+
+`npm run test:headed` and `npm run test:ui` also use the existing bundles and open headed browsers or the Playwright UI.
+
+`npm run lint:sass:unused` checks for unused Sass variables.
 
 ## License
 
