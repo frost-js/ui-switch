@@ -365,6 +365,8 @@ const compactSwitch = Switch.init(node, { size: 'sm' });
 
 ## Development
 
+The npm override keeps `baseline-browser-mapping` at `2.11.20`: newer mapping data currently makes `baseline newly available` resolve to an incomplete or empty browser list with the installed Can I Use data. Revisit the override when those datasets align, and verify the resolved browser targets and generated CSS before removing it.
+
 Use Node.js matching `^20.19.0 || ^22.13.0 || >=24`. Install dependencies with `npm ci`, then install Playwright browsers with `npx playwright install --with-deps`.
 
 ```bash

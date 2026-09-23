@@ -88,5 +88,8 @@
     },
     "publishConfig": {
         "access": "public"
+    },
+    "overrides": {
+        "baseline-browser-mapping": "2.11.20"
     }
 }
