@@ -50,7 +50,7 @@ const notifications = Switch.init(
 );
 ```
 
-Switch v3 requires `@fr0st/ui ^4.0.0` and `@fr0st/query ^5.0.0` as peer dependencies so the component shares the application's UI and fQuery instances. The package root, `dist/*`, and `src/*` are available through package exports.
+`@fr0st/ui` and `@fr0st/query` are peer dependencies so the component shares the application's UI and fQuery instances. The package root, `dist/*`, and `src/*` are available through package exports.
 
 Switch requires a browser DOM or a compatible DOM environment configured through fQuery. Server-rendered applications should load the component on the client.
 
@@ -255,6 +255,8 @@ An instance also exposes its original input as `instance.node` and its frozen re
 
 Calling `disable()` during a drag restores the displayed position to the checkbox's current state without emitting a change event. Further movement and release from that drag do not toggle the checkbox.
 
+`dispose()` restores the input's original visually-hidden state and `tabindex`, preserves its current checked and disabled state and unrelated classes, and removes generated label IDs only if the application has not changed them. The input can then be initialized again with new options.
+
 ## Events
 
 Switch emits one namespaced fQuery event from the original checkbox after a component-driven state change completes:
@@ -339,33 +341,7 @@ Normal document and ancestor direction is respected. A `dir` attribute placed di
 
 In RTL layouts, the visual positions and physical drag direction are mirrored while checked state semantics remain unchanged.
 
-## Disposal
-
-`dispose()` removes the rendered switch, component events (including the form reset listener), pending transition, drag click suppression, and registered fQuery component data. It disconnects any pending resize observer and ignores deferred reset work. It restores the original input's pre-existing visually-hidden state and `tabindex` while preserving unrelated or runtime-added classes.
-
-Generated label IDs are removed only when they still contain the component-generated value. Existing IDs and IDs changed by the application remain untouched. The input's current checked and disabled state are preserved.
-
-```js
-switchControl.dispose();
-
-// The same input can now be initialized with new options.
-const compactSwitch = Switch.init(node, { size: 'sm' });
-```
-
-## Migrating from v2 to v3
-
-- Upgrade peer dependencies to `@fr0st/query ^5.0.0` and `@fr0st/ui ^4.0.0`.
-- Load Frost UI v4 CSS together with `frost-ui-switch.css`; Switch still requires its component-specific layout stylesheet.
-- Bundlers now resolve the package root to the compiled ESM bundle. Browser ESM consumers must provide import-map entries for `@fr0st/core`, `@fr0st/query`, and `@fr0st/ui`.
-- UMD consumers should continue loading Frost UI's bundle first, then `frost-ui-switch.js`; the component extends the existing `globalThis.UI` namespace.
-- Replace unsupported internal `_node` and `_options` access with the public `node` and `options` getters.
-- Do not import legacy prototype or wrapper source paths. Use the package root, `dist/*`, or supported `src/*` exports.
-- Public option names, class names, and methods remain available. v3 additionally fixes label association, disposal restoration, interrupted transitions, native form resets, hidden initialization, disabling during a drag, and RTL movement.
-- Development requires Node `^20.19.0`, `^22.13.0`, or `>=24`.
-
 ## Development
-
-The npm override keeps `baseline-browser-mapping` at `2.11.20`: newer mapping data currently makes `baseline newly available` resolve to an incomplete or empty browser list with the installed Can I Use data. Revisit the override when those datasets align, and verify the resolved browser targets and generated CSS before removing it.
 
 Use Node.js matching `^20.19.0 || ^22.13.0 || >=24`. Install dependencies with `npm ci`, then install Playwright browsers with `npx playwright install --with-deps`.
 
