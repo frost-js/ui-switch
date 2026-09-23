@@ -255,7 +255,7 @@ An instance also exposes its original input as `instance.node` and its frozen re
 
 Calling `disable()` during a drag restores the displayed position to the checkbox's current state without emitting a change event. Further movement and release from that drag do not toggle the checkbox.
 
-`dispose()` restores the input's original visually-hidden state and `tabindex`, preserves its current checked and disabled state and unrelated classes, and removes generated label IDs only if the application has not changed them. The input can then be initialized again with new options.
+`dispose()` restores the input's original visually-hidden state, `aria-hidden`, and `tabindex`, preserves its current checked and disabled state and unrelated classes, and removes generated label IDs only if the application has not changed them. The input can then be initialized again with new options.
 
 ## Events
 
@@ -313,7 +313,7 @@ Pass an options object to initialize every matched input, or pass a public metho
 - Explicit labels, wrapping labels, and existing `aria-labelledby` references contribute to the rendered control's accessible name.
 - An input `aria-label` is copied when no label references are available.
 - Labels without IDs receive temporary generated IDs while the component is active.
-- The rendered control enters the tab order while the original checkbox becomes visually hidden and receives `tabindex="-1"`.
+- The rendered control enters the tab order while the original checkbox becomes visually hidden and receives `aria-hidden="true"` and `tabindex="-1"` to expose a single accessible control.
 - Space and Enter toggle the focused switch. Repeated keydown events are ignored.
 - Disabled switches leave the tab order and ignore keyboard, click, mouse, and touch interaction.
 - The original checkbox remains the submitted form field and preserves native `checked`, `required`, and `disabled` behavior.

@@ -79,6 +79,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		static #DRAG_THRESHOLD = 3;
 		#animating = false;
 		#animationId = 0;
+		#ariaHidden;
 		#container;
 		#currentX = 0;
 		#divider;
@@ -107,10 +108,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			super(node, options);
 			this.#form = this.node.form;
 			this.#targetState = this.getState();
+			const focused = _fr0st_query.default.is(this.node, ":focus");
 			this.#render();
 			this.#refresh();
 			this.#refreshDisabled();
 			this.#events();
+			if (focused) _fr0st_query.default.focus(this.#outerContainer);
 		}
 		/**
 		* Disables the Switch.
@@ -133,6 +136,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			if (this.#form) _fr0st_query.default.removeEvent(this.#form, "reset.ui.switch", this.#resetHandler);
 			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
+			if (this.#ariaHidden === null) _fr0st_query.default.removeAttribute(this.node, "aria-hidden");
+			else _fr0st_query.default.setAttribute(this.node, { "aria-hidden": this.#ariaHidden });
 			if (this.#tabIndex === null) _fr0st_query.default.removeAttribute(this.node, "tabindex");
 			else _fr0st_query.default.setAttribute(this.node, { tabindex: this.#tabIndex });
 			this.#container = null;
@@ -375,6 +380,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#render() {
 			this.#hidden = _fr0st_query.default.hasClass(this.node, this.constructor.classes.hide);
 			this.#tabIndex = _fr0st_query.default.getAttribute(this.node, "tabindex");
+			this.#ariaHidden = _fr0st_query.default.getAttribute(this.node, "aria-hidden");
 			const labelledBy = /* @__PURE__ */ new Set();
 			const inputLabelledBy = _fr0st_query.default.getAttribute(this.node, "aria-labelledby");
 			if (inputLabelledBy) for (const id of inputLabelledBy.split(/\s+/)) labelledBy.add(id);
@@ -422,7 +428,10 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.append(this.#container, this.#offToggle);
 			_fr0st_query.default.append(this.#outerContainer, this.#container);
 			_fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
-			_fr0st_query.default.setAttribute(this.node, { tabindex: -1 });
+			_fr0st_query.default.setAttribute(this.node, {
+				"tabindex": -1,
+				"aria-hidden": true
+			});
 			_fr0st_query.default.before(this.node, this.#outerContainer);
 		}
 		/**

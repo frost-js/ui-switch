@@ -133,6 +133,28 @@ test.describe('Switch', () => {
             await expect(page.locator('.switch-outer')).toHaveCount(0);
         });
 
+        for (const ariaHidden of [null, 'false', 'true']) {
+            test(`restores original aria-hidden ${ariaHidden ?? 'absence'} after disposal`, async ({ page }) => {
+                await page.evaluate((ariaHidden) => {
+                    const input = document.querySelector('#switch');
+                    if (ariaHidden !== null) {
+                        input.setAttribute('aria-hidden', ariaHidden);
+                    }
+                    UI.Switch.init(input, { animate: false });
+                }, ariaHidden);
+
+                const input = page.locator('#switch');
+                await expect(input).toHaveAttribute('aria-hidden', 'true');
+                await page.evaluate((_) => $.getData('#switch', 'switch').dispose());
+
+                if (ariaHidden === null) {
+                    await expect(input).not.toHaveAttribute('aria-hidden');
+                } else {
+                    await expect(input).toHaveAttribute('aria-hidden', ariaHidden);
+                }
+            });
+        }
+
         test('restores generated label IDs without removing runtime IDs', async ({ page }) => {
             await page.evaluate((_) => {
                 $.setHtml(
@@ -391,6 +413,37 @@ test.describe('Switch', () => {
             await expect(input).toHaveAttribute('tabindex', '-1');
         });
 
+        for (const focused of [false, true]) {
+            test(`exposes one accessible control when initialized ${focused ? 'focused' : 'unfocused'}`, async ({ page }) => {
+                await page.evaluate((focused) => {
+                    document.body.innerHTML = '<button>Other control</button><label for="switch">Notifications</label><input id="switch" type="checkbox">';
+                    const input = document.querySelector('#switch');
+                    const focusTarget = focused ? input : document.querySelector('button');
+                    focusTarget.focus();
+                    UI.Switch.init(input, { animate: false });
+                }, focused);
+
+                const control = page.getByRole('switch', { name: 'Notifications' });
+                await expect(control).toHaveCount(1);
+                await expect(page.getByRole('checkbox')).toHaveCount(0);
+                await expect(page.locator('body')).toMatchAriaSnapshot(`
+                    - button "Other control"
+                    - text: Notifications
+                    - switch "Notifications"
+                `);
+                await expect(focused ? control : page.getByRole('button')).toBeFocused();
+
+                await page.locator('label').click();
+                await expect(control).toBeChecked();
+                await expect(page.locator('#switch')).toBeChecked();
+                await expect(page.getByRole('checkbox')).toHaveCount(0);
+
+                await page.evaluate((_) => $.getData('#switch', 'switch').dispose());
+                await expect(page.getByRole('switch')).toHaveCount(0);
+                await expect(page.getByRole('checkbox', { name: 'Notifications' })).toBeChecked();
+            });
+        }
+
         test('renders checked, required, and disabled state', async ({ page }) => {
             await page.evaluate((_) => {
                 $.setHtml(
@@ -485,6 +538,8 @@ test.describe('Switch', () => {
 
             const outer = page.locator('.switch-outer');
             await expect(outer).toHaveAttribute('aria-labelledby', 'wrapper');
+            await expect(page.getByRole('switch', { name: 'Notifications' })).toHaveCount(1);
+            await expect(page.getByRole('checkbox')).toHaveCount(0);
             await outer.click();
             await expect(page.locator('#switch')).toBeChecked();
             await page.locator('#wrapper').click({ position: { x: 2, y: 2 } });

@@ -47,6 +47,7 @@ var Switch = class Switch extends BaseComponent {
 	static #DRAG_THRESHOLD = 3;
 	#animating = false;
 	#animationId = 0;
+	#ariaHidden;
 	#container;
 	#currentX = 0;
 	#divider;
@@ -75,10 +76,12 @@ var Switch = class Switch extends BaseComponent {
 		super(node, options);
 		this.#form = this.node.form;
 		this.#targetState = this.getState();
+		const focused = $.is(this.node, ":focus");
 		this.#render();
 		this.#refresh();
 		this.#refreshDisabled();
 		this.#events();
+		if (focused) $.focus(this.#outerContainer);
 	}
 	/**
 	* Disables the Switch.
@@ -101,6 +104,8 @@ var Switch = class Switch extends BaseComponent {
 		if (this.#form) $.removeEvent(this.#form, "reset.ui.switch", this.#resetHandler);
 		if (this.#hidden) $.addClass(this.node, this.constructor.classes.hide);
 		else $.removeClass(this.node, this.constructor.classes.hide);
+		if (this.#ariaHidden === null) $.removeAttribute(this.node, "aria-hidden");
+		else $.setAttribute(this.node, { "aria-hidden": this.#ariaHidden });
 		if (this.#tabIndex === null) $.removeAttribute(this.node, "tabindex");
 		else $.setAttribute(this.node, { tabindex: this.#tabIndex });
 		this.#container = null;
@@ -343,6 +348,7 @@ var Switch = class Switch extends BaseComponent {
 	#render() {
 		this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
 		this.#tabIndex = $.getAttribute(this.node, "tabindex");
+		this.#ariaHidden = $.getAttribute(this.node, "aria-hidden");
 		const labelledBy = /* @__PURE__ */ new Set();
 		const inputLabelledBy = $.getAttribute(this.node, "aria-labelledby");
 		if (inputLabelledBy) for (const id of inputLabelledBy.split(/\s+/)) labelledBy.add(id);
@@ -390,7 +396,10 @@ var Switch = class Switch extends BaseComponent {
 		$.append(this.#container, this.#offToggle);
 		$.append(this.#outerContainer, this.#container);
 		$.addClass(this.node, this.constructor.classes.hide);
-		$.setAttribute(this.node, { tabindex: -1 });
+		$.setAttribute(this.node, {
+			"tabindex": -1,
+			"aria-hidden": true
+		});
 		$.before(this.node, this.#outerContainer);
 	}
 	/**

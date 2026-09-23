@@ -218,3 +218,29 @@ test.describe('Switch form resets', () => {
         await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'true');
     });
 });
+
+test.describe('Switch form validation', () => {
+    test('keeps required validation, focus redirection, and form submission working', async ({ page }) => {
+        await page.evaluate((_) => {
+            document.body.innerHTML = '<form><label for="switch">Notifications</label><input id="switch" name="notifications" value="yes" type="checkbox" required><button>Submit</button></form>';
+            UI.Switch.init(document.querySelector('#switch'), { animate: false });
+            window.submittedNotifications = null;
+            document.querySelector('form').addEventListener('submit', (event) => {
+                event.preventDefault();
+                window.submittedNotifications = new FormData(event.target).get('notifications');
+            });
+        });
+
+        await page.getByRole('button', { name: 'Submit' }).click();
+        expect(await page.evaluate((_) => window.submittedNotifications)).toBeNull();
+        await expect(page.getByRole('switch', { name: 'Notifications' })).toBeFocused();
+        expect(await page.locator('#switch').evaluate((node) => node.validity.valueMissing)).toBe(true);
+        await expect(page.getByRole('checkbox')).toHaveCount(0);
+
+        await page.locator('label').click();
+        await expect(page.locator('#switch')).toBeChecked();
+        await page.getByRole('button', { name: 'Submit' }).click();
+        expect(await page.evaluate((_) => window.submittedNotifications)).toBe('yes');
+        expect(await page.locator('#switch').evaluate((node) => node.validity.valid)).toBe(true);
+    });
+});

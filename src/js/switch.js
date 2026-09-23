@@ -50,6 +50,7 @@ export default class Switch extends BaseComponent {
 
     #animating = false;
     #animationId = 0;
+    #ariaHidden;
     #container;
     #currentX = 0;
     #divider;
@@ -81,10 +82,16 @@ export default class Switch extends BaseComponent {
         this.#form = this.node.form;
         this.#targetState = this.getState();
 
+        const focused = $.is(this.node, ':focus');
+
         this.#render();
         this.#refresh();
         this.#refreshDisabled();
         this.#events();
+
+        if (focused) {
+            $.focus(this.#outerContainer);
+        }
     }
 
     /**
@@ -126,6 +133,12 @@ export default class Switch extends BaseComponent {
             $.addClass(this.node, this.constructor.classes.hide);
         } else {
             $.removeClass(this.node, this.constructor.classes.hide);
+        }
+
+        if (this.#ariaHidden === null) {
+            $.removeAttribute(this.node, 'aria-hidden');
+        } else {
+            $.setAttribute(this.node, { 'aria-hidden': this.#ariaHidden });
         }
 
         if (this.#tabIndex === null) {
@@ -534,6 +547,7 @@ export default class Switch extends BaseComponent {
     #render() {
         this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
         this.#tabIndex = $.getAttribute(this.node, 'tabindex');
+        this.#ariaHidden = $.getAttribute(this.node, 'aria-hidden');
 
         const labelledBy = new Set;
         const inputLabelledBy = $.getAttribute(this.node, 'aria-labelledby');
@@ -604,7 +618,10 @@ export default class Switch extends BaseComponent {
         $.append(this.#outerContainer, this.#container);
 
         $.addClass(this.node, this.constructor.classes.hide);
-        $.setAttribute(this.node, { tabindex: -1 });
+        $.setAttribute(this.node, {
+            'tabindex': -1,
+            'aria-hidden': true,
+        });
         $.before(this.node, this.#outerContainer);
     }
 
