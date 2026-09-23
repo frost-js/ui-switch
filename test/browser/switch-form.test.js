@@ -1,11 +1,9 @@
 import { expect, test } from '#test';
-import { resetPage } from '../setup/browser.js';
 
 test.describe('Switch form resets', () => {
+    test.use({ mockClock: true });
+
     test.beforeEach(async ({ page }) => {
-        await resetPage(page);
-        await page.clock.install({ time: 0 });
-        await page.clock.pauseAt(1000);
         await page.evaluate((_) => {
             document.body.innerHTML = '<form id="form"><input id="switch" type="checkbox"></form>';
             UI.Switch.init($.findOne('#switch'), { animate: false, labelWidth: 80 });

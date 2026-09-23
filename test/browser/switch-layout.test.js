@@ -1,9 +1,7 @@
 import { expect, test } from '#test';
-import { resetPage } from '../setup/browser.js';
 
 test.describe('Switch hidden initialization', () => {
     test.beforeEach(async ({ page }) => {
-        await resetPage(page);
         await page.evaluate((_) => {
             document.body.innerHTML = '<div id="panel" hidden><input id="switch" type="checkbox"></div>';
             window.switchObservers = new Set;
