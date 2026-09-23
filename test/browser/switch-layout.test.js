@@ -21,6 +21,56 @@ test.describe('Switch hidden initialization', () => {
         });
     });
 
+    test('defers hidden layout without fixing widths to zero', async ({ page }) => {
+        await page.evaluate((_) => {
+            const input = document.querySelector('#switch');
+            input.checked = true;
+            UI.Switch.init(input);
+        });
+
+        const outer = page.locator('.switch-outer');
+        expect(await outer.evaluate((node) => [
+            node.style.width,
+            node.querySelector('.switch').style.width,
+            node.querySelector('.switch-toggle-on').style.width,
+            node.querySelector('.switch-toggle-off').style.width,
+        ])).toEqual(['', '', '', '']);
+        await expect(outer).toHaveAttribute('aria-checked', 'true');
+        await expect(outer.locator('.switch')).not.toHaveAttribute('style', /NaN/);
+    });
+
+    test('applies explicit widths while hidden without observing', async ({ page }) => {
+        await page.evaluate((_) => {
+            UI.Switch.init($.findOne('#switch'), {
+                animate: false,
+                labelWidth: 80,
+                dividerWidth: 20,
+            });
+        });
+
+        const outer = page.locator('#panel .switch-outer');
+        expect(await outer.evaluate((node) => node.style.width)).toBe('100px');
+        expect(await page.evaluate((_) => window.switchObservers.size)).toBe(0);
+
+        await page.evaluate((_) => $.findOne('#panel').hidden = false);
+        await expect(outer).toHaveCSS('width', '100px');
+        await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
+    });
+
+    test('ignores dragging before hidden dimensions are available', async ({ page }) => {
+        await page.evaluate((_) => {
+            const input = document.querySelector('#switch');
+            UI.Switch.init(input, { duration: 100 }).setState(true);
+            input.previousElementSibling.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
+            window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500 }));
+            window.dispatchEvent(new MouseEvent('mouseup'));
+        });
+
+        await expect(page.locator('#switch')).toBeChecked();
+        await expect(page.locator('.switch')).toHaveAttribute('style', /transform: translateX\(0px\)/);
+        await expect(page.locator('.switch')).not.toHaveAttribute('style', /NaN/);
+    });
+
     for (const dir of ['ltr', 'rtl']) {
         for (const checked of [false, true]) {
             test(`measures an initially ${checked ? 'checked' : 'unchecked'} ${dir} switch when revealed`, async ({ page }) => {
@@ -81,24 +131,6 @@ test.describe('Switch hidden initialization', () => {
         await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
         expect(await page.evaluate((_) => window.layoutChanges)).toBe(0);
         expect(await page.evaluate((_) => window.switchObservers.size)).toBe(0);
-    });
-
-    test('applies explicit widths while hidden without observing', async ({ page }) => {
-        await page.evaluate((_) => {
-            UI.Switch.init($.findOne('#switch'), {
-                animate: false,
-                labelWidth: 80,
-                dividerWidth: 20,
-            });
-        });
-
-        const outer = page.locator('#panel .switch-outer');
-        expect(await outer.evaluate((node) => node.style.width)).toBe('100px');
-        expect(await page.evaluate((_) => window.switchObservers.size)).toBe(0);
-
-        await page.evaluate((_) => $.findOne('#panel').hidden = false);
-        await expect(outer).toHaveCSS('width', '100px');
-        await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
     });
 
     test('disconnects when disposed before becoming visible', async ({ page }) => {

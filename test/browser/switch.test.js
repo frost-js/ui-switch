@@ -191,7 +191,7 @@ test.describe('Switch', () => {
             await expect(page.locator('.switch-outer')).toHaveCount(1);
         });
 
-        test('cancels an active transition and click suppression', async ({ page }) => {
+        test('disposes safely after a touch interrupts an animation', async ({ page }) => {
             const errors = [];
             page.on('pageerror', (error) => errors.push(error.message));
             const component = await page.evaluateHandle((_) => {
@@ -225,6 +225,26 @@ test.describe('Switch', () => {
 
     test.describe('#disable', () => {
         test.use({ mockClock: true });
+
+        for (const { name, update } of [
+            { name: 'class', update: (instance) => instance.disable() },
+            { name: 'QuerySet', update: () => $('#switch').switch('disable') },
+        ]) {
+            test(`updates disabled state (${name})`, async ({ page }) => {
+                const instance = await page.evaluateHandle((_) => {
+                    const input = document.querySelector('#switch');
+                    input.disabled = false;
+                    return UI.Switch.init(input, { animate: false });
+                });
+                await page.evaluate(update, instance);
+
+                const outer = page.locator('.switch-outer');
+                await expect(page.locator('#switch')).toBeDisabled();
+                await expect(outer).toHaveClass(/\bswitch-disabled\b/);
+                await expect(outer).toHaveAttribute('aria-disabled', 'true');
+                await expect(outer).toHaveAttribute('tabindex', '-1');
+            });
+        }
 
         for (const checked of [false, true]) {
             test(`cancels an active drag from the ${checked ? 'checked' : 'unchecked'} state`, async ({ page }) => {
@@ -272,30 +292,27 @@ test.describe('Switch', () => {
         }
     });
 
-    for (const method of ['disable', 'enable']) {
-        test.describe(`#${method}`, () => {
-            for (const { name, update } of [
-                { name: 'class', update: ({ instance, method }) => instance[method]() },
-                { name: 'QuerySet', update: ({ method }) => $('#switch').switch(method) },
-            ]) {
-                test(`updates disabled state (${name})`, async ({ page }) => {
-                    const state = await page.evaluateHandle((method) => {
-                        const input = document.querySelector('#switch');
-                        input.disabled = method === 'enable';
-                        return { instance: UI.Switch.init(input, { animate: false }), method };
-                    }, method);
-                    await page.evaluate(update, state);
-
-                    const disabled = method === 'disable';
-                    const outer = page.locator('.switch-outer');
-                    await expect(page.locator('#switch')).toBeEnabled({ enabled: !disabled });
-                    await expect(outer).toHaveClass(disabled ? 'switch-outer switch-md switch-disabled' : 'switch-outer switch-md');
-                    await expect(outer).toHaveAttribute('aria-disabled', `${disabled}`);
-                    await expect(outer).toHaveAttribute('tabindex', disabled ? '-1' : '0');
+    test.describe('#enable', () => {
+        for (const { name, update } of [
+            { name: 'class', update: (instance) => instance.enable() },
+            { name: 'QuerySet', update: () => $('#switch').switch('enable') },
+        ]) {
+            test(`updates disabled state (${name})`, async ({ page }) => {
+                const instance = await page.evaluateHandle((_) => {
+                    const input = document.querySelector('#switch');
+                    input.disabled = true;
+                    return UI.Switch.init(input, { animate: false });
                 });
-            }
-        });
-    }
+                await page.evaluate(update, instance);
+
+                const outer = page.locator('.switch-outer');
+                await expect(page.locator('#switch')).toBeEnabled();
+                await expect(outer).not.toHaveClass(/\bswitch-disabled\b/);
+                await expect(outer).toHaveAttribute('aria-disabled', 'false');
+                await expect(outer).toHaveAttribute('tabindex', '0');
+            });
+        }
+    });
 
     test.describe('#getState', () => {
         for (const { name, getState } of [
@@ -313,31 +330,21 @@ test.describe('Switch', () => {
         }
     });
 
-    for (const { method, args } of [
-        { method: 'setState', args: [true] },
-        { method: 'toggleState', args: [] },
-    ]) {
-        test.describe(`#${method}`, () => {
-            for (const { name, update } of [
-                { name: 'class', update: ({ instance, method, args }) => instance[method](...args) },
-                { name: 'QuerySet', update: ({ method, args }) => $('#switch').switch(method, ...args) },
-            ]) {
-                test(`updates the state (${name})`, async ({ page }) => {
-                    const state = await page.evaluateHandle(({ method, args }) => ({
-                        instance: UI.Switch.init(document.querySelector('#switch'), { animate: false }),
-                        method,
-                        args,
-                    }), { method, args });
-                    await page.evaluate(update, state);
-
-                    await expect(page.locator('#switch')).toBeChecked();
-                    await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'true');
-                });
-            }
-        });
-    }
-
     test.describe('#setState', () => {
+        for (const { name, update } of [
+            { name: 'class', update: (instance) => instance.setState(true) },
+            { name: 'QuerySet', update: () => $('#switch').switch('setState', true) },
+        ]) {
+            test(`updates the state (${name})`, async ({ page }) => {
+                const instance = await page.evaluateHandle((_) =>
+                    UI.Switch.init(document.querySelector('#switch'), { animate: false }));
+                await page.evaluate(update, instance);
+
+                await expect(page.locator('#switch')).toBeChecked();
+                await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'true');
+            });
+        }
+
         test('normalizes the state', async ({ page }) => {
             await page.evaluate((_) => {
                 UI.Switch.init(
@@ -349,6 +356,22 @@ test.describe('Switch', () => {
             await expect(page.locator('#switch')).toBeChecked();
             await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'true');
         });
+    });
+
+    test.describe('#toggleState', () => {
+        for (const { name, update } of [
+            { name: 'class', update: (instance) => instance.toggleState() },
+            { name: 'QuerySet', update: () => $('#switch').switch('toggleState') },
+        ]) {
+            test(`updates the state (${name})`, async ({ page }) => {
+                const instance = await page.evaluateHandle((_) =>
+                    UI.Switch.init(document.querySelector('#switch'), { animate: false }));
+                await page.evaluate(update, instance);
+
+                await expect(page.locator('#switch')).toBeChecked();
+                await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'true');
+            });
+        }
     });
 
     test.describe('input attributes', () => {
@@ -522,188 +545,373 @@ test.describe('Switch', () => {
     });
 
     test.describe('user events', () => {
-        test('clicks to toggle once', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.Switch.init($.findOne('#switch'), { animate: false });
-            });
-
-            const outer = page.locator('.switch-outer');
-            await outer.click();
-            await expect(page.locator('#switch')).toBeChecked();
-            await expect(outer).toHaveAttribute('aria-checked', 'true');
-            await outer.click();
-            await expect(page.locator('#switch')).not.toBeChecked();
-        });
-
-        test('ignores non-primary and disabled clicks', async ({ page }) => {
-            await page.evaluate((_) => {
-                const input = $.findOne('#switch');
-                UI.Switch.init(input, { animate: false });
-                const outer = input.previousElementSibling;
-                outer.dispatchEvent(new MouseEvent('click', {
-                    bubbles: true,
-                    button: 1,
-                    cancelable: true,
-                }));
-            });
-            await expect(page.locator('#switch')).not.toBeChecked();
-
-            await page.evaluate((_) => {
-                const component = $.getData('#switch', 'switch');
-                const outer = component.node.previousElementSibling;
-                component.disable();
-                outer.dispatchEvent(new MouseEvent('click', {
-                    bubbles: true,
-                    button: 0,
-                    cancelable: true,
-                }));
-            });
-            await expect(page.locator('#switch')).not.toBeChecked();
-        });
-
-        test('toggles with Space and Enter but ignores repeat and unrelated keys', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.Switch.init($.findOne('#switch'), { animate: false });
-            });
-
-            const outer = page.locator('.switch-outer');
-            await outer.focus();
-            await outer.press('ArrowLeft');
-            await expect(page.locator('#switch')).not.toBeChecked();
-            await page.evaluate((_) => {
-                $.findOne('.switch-outer').dispatchEvent(new KeyboardEvent('keydown', {
-                    bubbles: true,
-                    code: 'Space',
-                    repeat: true,
-                }));
-            });
-            await expect(page.locator('#switch')).not.toBeChecked();
-            await outer.press('Space');
-            await expect(page.locator('#switch')).toBeChecked();
-            await outer.press('Enter');
-            await expect(page.locator('#switch')).not.toBeChecked();
-        });
-
-        test('ignores keyboard interaction while disabled', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.Switch.init(
-                    $.findOne('#switch'),
-                    { animate: false },
-                ).disable();
-                $.findOne('.switch-outer').dispatchEvent(new KeyboardEvent('keydown', {
-                    bubbles: true,
-                    code: 'Space',
-                }));
-            });
-
-            await expect(page.locator('#switch')).not.toBeChecked();
-        });
-
-        test('redirects input focus to the rendered Switch', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.Switch.init($.findOne('#switch'), { animate: false });
-                $.focus('#switch');
-            });
-
-            await expect(page.locator('.switch-outer')).toBeFocused();
-        });
-
-        test('drags with the mouse in both directions', async ({ page }) => {
-            await page.evaluate((_) => {
-                const input = $.findOne('#switch');
-                UI.Switch.init(input, {
-                    animate: false,
-                    labelWidth: 80,
+        test.describe('click', () => {
+            test('clicks to toggle once', async ({ page }) => {
+                await page.evaluate((_) => {
+                    UI.Switch.init($.findOne('#switch'), { animate: false });
                 });
-                const outer = input.previousElementSibling;
-                outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500 }));
-                window.dispatchEvent(new MouseEvent('mouseup'));
+
+                const outer = page.locator('.switch-outer');
+                await outer.click();
+                await expect(page.locator('#switch')).toBeChecked();
+                await expect(outer).toHaveAttribute('aria-checked', 'true');
+                await outer.click();
+                await expect(page.locator('#switch')).not.toBeChecked();
             });
 
-            await expect(page.locator('#switch')).toBeChecked();
+            for (const { name, disabled, button } of [
+                { name: 'non-primary', disabled: false, button: 1 },
+                { name: 'disabled', disabled: true, button: 0 },
+            ]) {
+                test(`ignores ${name} clicks`, async ({ page }) => {
+                    await page.evaluate(({ disabled, button }) => {
+                        const input = document.querySelector('#switch');
+                        const component = UI.Switch.init(input, { animate: false });
+                        if (disabled) {
+                            component.disable();
+                        }
+                        input.previousElementSibling.dispatchEvent(new MouseEvent('click', {
+                            bubbles: true,
+                            button,
+                            cancelable: true,
+                        }));
+                    }, { disabled, button });
 
-            await page.evaluate((_) => {
-                const outer = $.findOne('.switch-outer');
-                outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                window.dispatchEvent(new MouseEvent('mousemove', { clientX: 300 }));
-                window.dispatchEvent(new MouseEvent('mouseup'));
-            });
-            await expect(page.locator('#switch')).not.toBeChecked();
+                    await expect(page.locator('#switch')).not.toBeChecked();
+                    await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'false');
+                });
+            }
         });
 
-        test('treats sub-threshold mouse movement as a click', async ({ page }) => {
-            await page.evaluate((_) => {
-                const input = $.findOne('#switch');
-                UI.Switch.init(input, {
-                    animate: false,
-                    labelWidth: 80,
+        test.describe('keyboard', () => {
+            for (const { key, checked } of [
+                { key: 'Space', checked: false },
+                { key: 'Enter', checked: true },
+            ]) {
+                test(`toggles with ${key}`, async ({ page }) => {
+                    await page.evaluate((checked) => {
+                        const input = document.querySelector('#switch');
+                        input.checked = checked;
+                        UI.Switch.init(input, { animate: false });
+                    }, checked);
+
+                    await page.locator('.switch-outer').press(key);
+                    await expect(page.locator('#switch')).toBeChecked({ checked: !checked });
+                    await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', `${!checked}`);
                 });
-                const outer = input.previousElementSibling;
-                outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                window.dispatchEvent(new MouseEvent('mousemove', { clientX: 401 }));
-                window.dispatchEvent(new MouseEvent('mouseup'));
-                outer.click();
+            }
+
+            for (const { name, press } of [
+                { name: 'unrelated keys', press: (outer) => outer.press('ArrowLeft') },
+                {
+                    name: 'repeated keydown events',
+                    press: (outer) => outer.evaluate((node) => node.dispatchEvent(new KeyboardEvent('keydown', {
+                        bubbles: true,
+                        code: 'Space',
+                        repeat: true,
+                    }))),
+                },
+            ]) {
+                test(`ignores ${name}`, async ({ page }) => {
+                    await page.evaluate((_) => UI.Switch.init(document.querySelector('#switch'), { animate: false }));
+
+                    const outer = page.locator('.switch-outer');
+                    await outer.focus();
+                    await press(outer);
+                    await expect(page.locator('#switch')).not.toBeChecked();
+                    await expect(outer).toHaveAttribute('aria-checked', 'false');
+                });
+            }
+
+            test('ignores keyboard interaction while disabled', async ({ page }) => {
+                await page.evaluate((_) => {
+                    UI.Switch.init(
+                        $.findOne('#switch'),
+                        { animate: false },
+                    ).disable();
+                    $.findOne('.switch-outer').dispatchEvent(new KeyboardEvent('keydown', {
+                        bubbles: true,
+                        code: 'Space',
+                    }));
+                });
+
+                await expect(page.locator('#switch')).not.toBeChecked();
             });
-            await expect(page.locator('#switch')).toBeChecked();
         });
 
-        test('drags with touch and suppresses the generated click', async ({ page }) => {
-            await page.evaluate((_) => {
-                const input = $.findOne('#switch');
-                UI.Switch.init(input, {
-                    animate: false,
-                    labelWidth: 80,
+        test.describe('focus', () => {
+            test('redirects input focus to the rendered Switch', async ({ page }) => {
+                await page.evaluate((_) => {
+                    UI.Switch.init($.findOne('#switch'), { animate: false });
+                    $.focus('#switch');
                 });
-                const outer = input.previousElementSibling;
-                const rect = outer.getBoundingClientRect();
-                const y = rect.top + (rect.height / 2);
-                const dispatchTouch = (target, type, x, active) => {
-                    const event = new Event(type, {
+
+                await expect(page.locator('.switch-outer')).toBeFocused();
+            });
+
+            test('renders logical padding and a visible focus ring', async ({ page }) => {
+                await page.evaluate((_) => {
+                    UI.Switch.init($.findOne('#switch'), { animate: false });
+                });
+
+                await page.keyboard.press('Tab');
+                const outer = page.locator('.switch-outer');
+                await expect(outer).toBeFocused();
+                await expect(outer).not.toHaveCSS('box-shadow', 'none');
+                const on = outer.locator('.switch-toggle-on');
+                await expect(on).toHaveCSS('padding-inline-start', '16px');
+                await expect(on).toHaveCSS('padding-inline-end', '16px');
+                await expect(on).toHaveCSS('padding-block-start', '4px');
+                await expect(on).toHaveCSS('padding-block-end', '4px');
+            });
+        });
+
+        test.describe('drag', () => {
+            test('drags with the mouse in both directions', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const input = $.findOne('#switch');
+                    UI.Switch.init(input, {
+                        animate: false,
+                        labelWidth: 80,
+                    });
+                    const outer = input.previousElementSibling;
+                    outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
+                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500 }));
+                    window.dispatchEvent(new MouseEvent('mouseup'));
+                });
+
+                await expect(page.locator('#switch')).toBeChecked();
+
+                await page.evaluate((_) => {
+                    const outer = $.findOne('.switch-outer');
+                    outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
+                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 300 }));
+                    window.dispatchEvent(new MouseEvent('mouseup'));
+                });
+                await expect(page.locator('#switch')).not.toBeChecked();
+            });
+
+            test('renders and drags correctly in RTL', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const input = $.findOne('#switch');
+                    $.setAttribute(input, { dir: 'rtl' });
+                    UI.Switch.init(input, {
+                        animate: false,
+                        labelWidth: 80,
+                    });
+                });
+
+                const outer = page.locator('.switch-outer');
+                await expect(outer).toHaveAttribute('dir', 'rtl');
+                await expect(outer).toHaveCSS('direction', 'rtl');
+                await expect(outer.locator('.switch')).toHaveCSS(
+                    'transform',
+                    'matrix(1, 0, 0, 1, 80, 0)',
+                );
+                await page.evaluate((_) => {
+                    const outer = $.findOne('.switch-outer');
+                    outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
+                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 300 }));
+                    window.dispatchEvent(new MouseEvent('mouseup'));
+                });
+                await expect(page.locator('#switch')).toBeChecked();
+                await expect(outer.locator('.switch')).toHaveCSS(
+                    'transform',
+                    'matrix(1, 0, 0, 1, 0, 0)',
+                );
+            });
+
+            test('treats sub-threshold mouse movement as a click', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const input = $.findOne('#switch');
+                    UI.Switch.init(input, {
+                        animate: false,
+                        labelWidth: 80,
+                    });
+                    const outer = input.previousElementSibling;
+                    outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
+                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 401 }));
+                    window.dispatchEvent(new MouseEvent('mouseup'));
+                    outer.click();
+                });
+                await expect(page.locator('#switch')).toBeChecked();
+            });
+
+            test('drags with touch and suppresses the generated click', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const input = $.findOne('#switch');
+                    UI.Switch.init(input, {
+                        animate: false,
+                        labelWidth: 80,
+                    });
+                    const outer = input.previousElementSibling;
+                    const rect = outer.getBoundingClientRect();
+                    const y = rect.top + (rect.height / 2);
+                    const dispatchTouch = (target, type, x, active) => {
+                        const event = new Event(type, {
+                            bubbles: true,
+                            cancelable: true,
+                        });
+                        Object.defineProperty(event, 'touches', {
+                            value: active ? [{ pageX: x, pageY: y }] : [],
+                        });
+                        target.dispatchEvent(event);
+                    };
+
+                    dispatchTouch(outer, 'touchstart', rect.left + 10, true);
+                    dispatchTouch(window, 'touchmove', rect.right + 40, true);
+                    $.getData(input, 'switch').setState(true);
+                    dispatchTouch(window, 'touchend', rect.right + 40, false);
+                    outer.dispatchEvent(new MouseEvent('click', {
+                        bubbles: true,
+                        button: 0,
+                        cancelable: true,
+                    }));
+                });
+
+                await expect(page.locator('#switch')).toBeChecked();
+                const outer = page.locator('.switch-outer');
+                await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
+                await expect(outer).toHaveAttribute('aria-checked', 'true');
+                await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+            });
+
+            for (const { name, start } of [
+                {
+                    name: 'non-primary button',
+                    start: (outer) => outer.dispatchEvent(new MouseEvent('mousedown', {
+                        bubbles: true,
+                        button: 1,
+                        clientX: 400,
+                    })),
+                },
+                {
+                    name: 'malformed mouse event',
+                    start: (outer) => outer.dispatchEvent(new Event('mousedown', {
                         bubbles: true,
                         cancelable: true,
+                    })),
+                },
+            ]) {
+                test(`rejects a drag start with a ${name}`, async ({ page }) => {
+                    const outer = await page.evaluateHandle((_) => {
+                        const input = document.querySelector('#switch');
+                        UI.Switch.init(input, { animate: false, labelWidth: 80 });
+                        return input.previousElementSibling;
                     });
-                    Object.defineProperty(event, 'touches', {
-                        value: active ? [{ pageX: x, pageY: y }] : [],
+                    await page.evaluate(start, outer);
+                    await page.evaluate((_) => {
+                        window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500 }));
                     });
-                    target.dispatchEvent(event);
-                };
 
-                dispatchTouch(outer, 'touchstart', rect.left + 10, true);
-                dispatchTouch(window, 'touchmove', rect.right + 40, true);
-                $.getData(input, 'switch').setState(true);
-                dispatchTouch(window, 'touchend', rect.right + 40, false);
-                outer.dispatchEvent(new MouseEvent('click', {
-                    bubbles: true,
-                    button: 0,
-                    cancelable: true,
-                }));
+                    const rendered = page.locator('.switch-outer');
+                    await expect(rendered).not.toHaveClass(/\bswitch-dragging\b/);
+                    await expect(rendered.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
+
+                    await page.evaluate((_) => window.dispatchEvent(new MouseEvent('mouseup')));
+                    await expect(page.locator('#switch')).not.toBeChecked();
+                    await expect(rendered).toHaveAttribute('aria-checked', 'false');
+                });
+            }
+
+            test('ignores movement without a valid coordinate during a drag', async ({ page }) => {
+                await page.evaluate((_) => {
+                    const input = document.querySelector('#switch');
+                    UI.Switch.init(input, { animate: false, labelWidth: 80 });
+                    input.previousElementSibling.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
+                    window.dispatchEvent(new Event('mousemove'));
+                });
+
+                const outer = page.locator('.switch-outer');
+                await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
+                await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
+
+                await page.evaluate((_) => window.dispatchEvent(new MouseEvent('mouseup')));
+                await expect(page.locator('#switch')).not.toBeChecked();
+                await expect(outer).toHaveAttribute('aria-checked', 'false');
+            });
+        });
+    });
+
+    test.describe('transitions', () => {
+        test('handles rapid interrupted transitions deterministically', async ({ page }) => {
+            await page.evaluate((_) => {
+                const input = $.findOne('#switch');
+                const component = UI.Switch.init(input, {
+                    duration: 100,
+                    labelWidth: 80,
+                });
+                component.setState(true);
+            });
+
+            const track = page.locator('.switch');
+            await expect.poll(() => track.evaluate((node) => node.getAnimations().length)).toBe(1);
+            await track.evaluate((_) => new Promise(requestAnimationFrame));
+            await page.evaluate((_) => {
+                $.getData('#switch', 'switch').setState(false);
+            });
+            await expect.poll(() => track.evaluate((node) => node.getAnimations().length)).toBe(1);
+            await track.evaluate((_) => new Promise(requestAnimationFrame));
+            await page.evaluate((_) => {
+                $.getData('#switch', 'switch').setState(true);
             });
 
             await expect(page.locator('#switch')).toBeChecked();
             const outer = page.locator('.switch-outer');
-            await expect(outer).not.toHaveAttribute('data-ui-animating');
-            await expect(outer).not.toHaveAttribute('data-ui-sliding');
+            await expect(outer).toHaveAttribute('aria-checked', 'true');
+            await expect(track).toHaveCSS(
+                'transform',
+                'matrix(1, 0, 0, 1, 0, 0)',
+            );
         });
 
-        test('rejects invalid drag starts', async ({ page }) => {
-            expect(await page.evaluate((_) => {
+        test('allows a second click to reverse an active transition', async ({ page }) => {
+            await page.evaluate((_) => {
+                UI.Switch.init($.findOne('#switch'), {
+                    duration: 100,
+                    labelWidth: 80,
+                });
+            });
+
+            const outer = page.locator('.switch-outer');
+            await outer.click({ force: true });
+            const track = outer.locator('.switch');
+            await expect.poll(() => track.evaluate((node) => node.getAnimations().length)).toBe(1);
+            await track.evaluate((_) => new Promise(requestAnimationFrame));
+            await outer.click({ force: true });
+            await expect(page.locator('#switch')).not.toBeChecked();
+            await expect(outer).toHaveAttribute('aria-checked', 'false');
+        });
+
+        test('completes when the track transition is canceled externally', async ({ page }) => {
+            await page.evaluate((_) => {
                 const input = $.findOne('#switch');
-                UI.Switch.init(input, { animate: false });
-                const outer = input.previousElementSibling;
-                outer.dispatchEvent(new MouseEvent('mousedown', {
-                    bubbles: true,
-                    button: 1,
-                }));
-                outer.dispatchEvent(new Event('mousedown', {
-                    bubbles: true,
-                    cancelable: true,
-                }));
-                outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                window.dispatchEvent(new Event('mousemove'));
-                window.dispatchEvent(new MouseEvent('mouseup'));
-                return input.checked;
-            })).toBe(false);
+                const component = UI.Switch.init(input, {
+                    duration: 100,
+                    labelWidth: 80,
+                });
+                component.setState(true);
+            });
+
+            const track = page.locator('.switch');
+            await expect.poll(() => track.evaluate((node) => node.getAnimations().length)).toBe(1);
+            await track.evaluate((_) => new Promise(requestAnimationFrame));
+            await page.evaluate((_) => {
+                const input = $.findOne('#switch');
+                const transition = input.previousElementSibling.firstElementChild
+                    .getAnimations()
+                    .find((animation) => animation instanceof window.CSSTransition);
+
+                if (!transition) {
+                    throw new Error('Expected a CSS transition.');
+                }
+
+                transition.cancel();
+                $.getData(input, 'switch').setState(false);
+            });
+
+            await expect(page.locator('#switch')).not.toBeChecked();
+            await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'false');
         });
     });
 
@@ -834,101 +1042,6 @@ test.describe('Switch', () => {
             await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
             await expect(track).toHaveCSS('transition-duration', '0.3s');
             await expect(page.locator('#switch')).toBeChecked();
-        });
-
-        test('handles rapid interrupted transitions deterministically', async ({ page }) => {
-            await page.evaluate((_) => {
-                const input = $.findOne('#switch');
-                const component = UI.Switch.init(input, {
-                    duration: 100,
-                    labelWidth: 80,
-                });
-                component.setState(true);
-            });
-
-            const track = page.locator('.switch');
-            await expect.poll(() => track.evaluate((node) => node.getAnimations().length)).toBe(1);
-            await track.evaluate((_) => new Promise(requestAnimationFrame));
-            await page.evaluate((_) => {
-                $.getData('#switch', 'switch').setState(false);
-            });
-            await expect.poll(() => track.evaluate((node) => node.getAnimations().length)).toBe(1);
-            await track.evaluate((_) => new Promise(requestAnimationFrame));
-            await page.evaluate((_) => {
-                $.getData('#switch', 'switch').setState(true);
-            });
-
-            await expect(page.locator('#switch')).toBeChecked();
-            const outer = page.locator('.switch-outer');
-            await expect(outer).toHaveAttribute('aria-checked', 'true');
-            await expect(track).toHaveCSS(
-                'transform',
-                'matrix(1, 0, 0, 1, 0, 0)',
-            );
-        });
-
-        test('allows a second click to reverse an active transition', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.Switch.init($.findOne('#switch'), {
-                    duration: 100,
-                    labelWidth: 80,
-                });
-            });
-
-            const outer = page.locator('.switch-outer');
-            await outer.click({ force: true });
-            const track = outer.locator('.switch');
-            await expect.poll(() => track.evaluate((node) => node.getAnimations().length)).toBe(1);
-            await track.evaluate((_) => new Promise(requestAnimationFrame));
-            await outer.click({ force: true });
-            await expect(page.locator('#switch')).not.toBeChecked();
-            await expect(outer).toHaveAttribute('aria-checked', 'false');
-        });
-
-        test('completes when the track transition is canceled externally', async ({ page }) => {
-            await page.evaluate((_) => {
-                const input = $.findOne('#switch');
-                const component = UI.Switch.init(input, {
-                    duration: 100,
-                    labelWidth: 80,
-                });
-                component.setState(true);
-            });
-
-            const track = page.locator('.switch');
-            await expect.poll(() => track.evaluate((node) => node.getAnimations().length)).toBe(1);
-            await track.evaluate((_) => new Promise(requestAnimationFrame));
-            await page.evaluate((_) => {
-                const input = $.findOne('#switch');
-                const transition = input.previousElementSibling.firstElementChild
-                    .getAnimations()
-                    .find((animation) => animation instanceof window.CSSTransition);
-
-                if (!transition) {
-                    throw new Error('Expected a CSS transition.');
-                }
-
-                transition.cancel();
-                $.getData(input, 'switch').setState(false);
-            });
-
-            await expect(page.locator('#switch')).not.toBeChecked();
-            await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'false');
-        });
-
-        test('ignores dragging before hidden dimensions are available', async ({ page }) => {
-            await page.evaluate((_) => {
-                document.body.innerHTML = '<div hidden><input id="switch" type="checkbox"></div>';
-                const input = document.querySelector('#switch');
-                UI.Switch.init(input, { duration: 100 }).setState(true);
-                input.previousElementSibling.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500 }));
-                window.dispatchEvent(new MouseEvent('mouseup'));
-            });
-
-            await expect(page.locator('#switch')).toBeChecked();
-            await expect(page.locator('.switch')).toHaveAttribute('style', /transform: translateX\(0px\)/);
-            await expect(page.locator('.switch')).not.toHaveAttribute('style', /NaN/);
         });
 
         for (const { name, duration } of [
@@ -1089,75 +1202,5 @@ test.describe('Switch', () => {
                 await expect(outer.locator('.switch-toggle-off')).toHaveText('NO');
             });
         }
-    });
-
-    test.describe('styles and focus', () => {
-        test('renders logical padding and a visible focus ring', async ({ page }) => {
-            await page.evaluate((_) => {
-                UI.Switch.init($.findOne('#switch'), { animate: false });
-            });
-
-            await page.keyboard.press('Tab');
-            const outer = page.locator('.switch-outer');
-            await expect(outer).toBeFocused();
-            await expect(outer).not.toHaveCSS('box-shadow', 'none');
-            const on = outer.locator('.switch-toggle-on');
-            await expect(on).toHaveCSS('padding-inline-start', '16px');
-            await expect(on).toHaveCSS('padding-inline-end', '16px');
-            await expect(on).toHaveCSS('padding-block-start', '4px');
-            await expect(on).toHaveCSS('padding-block-end', '4px');
-        });
-    });
-
-    test.describe('direction and layout', () => {
-        test('renders and drags correctly in RTL', async ({ page }) => {
-            await page.evaluate((_) => {
-                const input = $.findOne('#switch');
-                $.setAttribute(input, { dir: 'rtl' });
-                UI.Switch.init(input, {
-                    animate: false,
-                    labelWidth: 80,
-                });
-            });
-
-            const outer = page.locator('.switch-outer');
-            await expect(outer).toHaveAttribute('dir', 'rtl');
-            await expect(outer).toHaveCSS('direction', 'rtl');
-            await expect(outer.locator('.switch')).toHaveCSS(
-                'transform',
-                'matrix(1, 0, 0, 1, 80, 0)',
-            );
-            await page.evaluate((_) => {
-                const outer = $.findOne('.switch-outer');
-                outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                window.dispatchEvent(new MouseEvent('mousemove', { clientX: 300 }));
-                window.dispatchEvent(new MouseEvent('mouseup'));
-            });
-            await expect(page.locator('#switch')).toBeChecked();
-            await expect(outer.locator('.switch')).toHaveCSS(
-                'transform',
-                'matrix(1, 0, 0, 1, 0, 0)',
-            );
-        });
-
-        test('defers hidden layout without fixing widths to zero', async ({ page }) => {
-            await page.evaluate((_) => {
-                $.setHtml(
-                    document.body,
-                    '<div hidden><input id="switch" type="checkbox" checked></div>',
-                );
-                UI.Switch.init($.findOne('#switch'));
-            });
-
-            const outer = page.locator('.switch-outer');
-            expect(await outer.evaluate((node) => [
-                node.style.width,
-                node.querySelector('.switch').style.width,
-                node.querySelector('.switch-toggle-on').style.width,
-                node.querySelector('.switch-toggle-off').style.width,
-            ])).toEqual(['', '', '', '']);
-            await expect(outer).toHaveAttribute('aria-checked', 'true');
-            await expect(outer.locator('.switch')).not.toHaveAttribute('style', /NaN/);
-        });
     });
 });

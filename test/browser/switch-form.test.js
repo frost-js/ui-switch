@@ -64,23 +64,6 @@ test.describe('Switch form resets', () => {
         await expect(page.locator('.switch').last()).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
     });
 
-    test('does not interrupt an animation when reset is canceled', async ({ page }) => {
-        await page.emulateMedia({ reducedMotion: 'no-preference' });
-        await page.evaluate((_) => {
-            const input = $.findOne('#switch');
-            $.getData(input, 'switch').dispose();
-            UI.Switch.init(input, { labelWidth: 80, duration: 5000 }).setState(true);
-            input.form.addEventListener('reset', (event) => event.preventDefault());
-            input.form.reset();
-        });
-        await page.clock.runFor(1);
-
-        expect(await page.locator('.switch').evaluate((node) => ({
-            transform: node.style.transform,
-            animations: node.getAnimations().length,
-        }))).toEqual({ transform: 'translateX(0px)', animations: 1 });
-    });
-
     test('finishes a reset when a later reset is canceled', async ({ page }) => {
         await page.evaluate((_) => {
             const input = $.findOne('#switch');
@@ -94,36 +77,6 @@ test.describe('Switch form resets', () => {
         await expect(page.locator('#switch')).not.toBeChecked();
         await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'false');
         await expect(page.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
-    });
-
-    test('ignores a pending reset after disposal', async ({ page }) => {
-        const errors = [];
-        page.on('pageerror', (error) => errors.push(error.message));
-        await page.evaluate((_) => {
-            const input = $.findOne('#switch');
-            $.getData(input, 'switch').setState(true);
-            input.form.reset();
-            $.getData(input, 'switch').dispose();
-        });
-        await page.clock.runFor(1);
-
-        await expect(page.locator('.switch-outer')).toHaveCount(0);
-        await expect(page.locator('#switch')).not.toBeChecked();
-        expect(errors).toEqual([]);
-    });
-
-    test('keeps other instances subscribed when one is disposed', async ({ page }) => {
-        await page.evaluate((_) => {
-            $.append('#form', '<input id="other" type="checkbox" checked>');
-            UI.Switch.init($.findOne('#other'), { animate: false, labelWidth: 80 }).setState(false);
-            $.getData('#switch', 'switch').dispose();
-            $.findOne('#form').reset();
-        });
-        await page.clock.runFor(1);
-
-        await expect(page.locator('.switch-outer')).toHaveCount(1);
-        await expect(page.locator('#other')).toBeChecked();
-        await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'true');
     });
 
     test('cancels an in-flight animation without changing the reset value later', async ({ page }) => {
@@ -141,6 +94,23 @@ test.describe('Switch form resets', () => {
         await page.clock.runFor(5100);
         await expect(page.locator('#switch')).not.toBeChecked();
         await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'false');
+    });
+
+    test('does not interrupt an animation when reset is canceled', async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: 'no-preference' });
+        await page.evaluate((_) => {
+            const input = $.findOne('#switch');
+            $.getData(input, 'switch').dispose();
+            UI.Switch.init(input, { labelWidth: 80, duration: 5000 }).setState(true);
+            input.form.addEventListener('reset', (event) => event.preventDefault());
+            input.form.reset();
+        });
+        await page.clock.runFor(1);
+
+        expect(await page.locator('.switch').evaluate((node) => ({
+            transform: node.style.transform,
+            animations: node.getAnimations().length,
+        }))).toEqual({ transform: 'translateX(0px)', animations: 1 });
     });
 
     for (const canceled of [false, true]) {
@@ -216,5 +186,35 @@ test.describe('Switch form resets', () => {
         await expect(page.locator('#switch')).not.toBeChecked();
         await page.locator('.switch-outer').click();
         await expect(page.locator('#switch')).toBeChecked();
+    });
+
+    test('ignores a pending reset after disposal', async ({ page }) => {
+        const errors = [];
+        page.on('pageerror', (error) => errors.push(error.message));
+        await page.evaluate((_) => {
+            const input = $.findOne('#switch');
+            $.getData(input, 'switch').setState(true);
+            input.form.reset();
+            $.getData(input, 'switch').dispose();
+        });
+        await page.clock.runFor(1);
+
+        await expect(page.locator('.switch-outer')).toHaveCount(0);
+        await expect(page.locator('#switch')).not.toBeChecked();
+        expect(errors).toEqual([]);
+    });
+
+    test('keeps other instances subscribed when one is disposed', async ({ page }) => {
+        await page.evaluate((_) => {
+            $.append('#form', '<input id="other" type="checkbox" checked>');
+            UI.Switch.init($.findOne('#other'), { animate: false, labelWidth: 80 }).setState(false);
+            $.getData('#switch', 'switch').dispose();
+            $.findOne('#form').reset();
+        });
+        await page.clock.runFor(1);
+
+        await expect(page.locator('.switch-outer')).toHaveCount(1);
+        await expect(page.locator('#other')).toBeChecked();
+        await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'true');
     });
 });
