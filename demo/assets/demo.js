@@ -1,5 +1,6 @@
-const $ = globalThis.$;
+const $ = globalThis.fQuery;
 const { Switch } = globalThis.UI;
+const themeKey = 'frostui-switch-demo-theme';
 
 const setTheme = (theme) => {
     if (theme === 'system') {
@@ -11,33 +12,59 @@ const setTheme = (theme) => {
     $('[data-demo-theme]').setValue(theme);
 };
 
-const storedTheme = localStorage.getItem('frostui-switch-demo-theme');
-setTheme(['light', 'dark'].includes(storedTheme) ? storedTheme : 'system');
+const logEvent = (message, className = 'text-body-secondary') => {
+    const log = $.findOne('#event-log');
+    const entry = $.create('div', {
+        class: ['small', 'font-monospace', 'py-2', 'border-bottom', className],
+        text: message,
+    });
+
+    $.append(log, entry);
+
+    while ($.children(log).length > 50) {
+        $.remove($.child(log)[0]);
+    }
+
+    $.setScrollY(log, $.height(log, { boxSize: $.SCROLL_BOX }));
+};
 
 $.ready(() => {
-    $('[data-ui-toggle="switch"]').switch();
+    let storedTheme;
+
+    try {
+        storedTheme = localStorage.getItem(themeKey);
+    } catch {
+        // The demo remains usable when browser storage is unavailable.
+    }
+
+    const requestedTheme = new URLSearchParams(location.search).get('theme');
+    const initialTheme = requestedTheme || storedTheme;
+    setTheme(['light', 'dark'].includes(initialTheme) ? initialTheme : 'system');
 
     $('[data-demo-theme]').addEvent('change', (event) => {
         const theme = $.getValue(event.currentTarget);
-
-        if (theme === 'system') {
-            localStorage.removeItem('frostui-switch-demo-theme');
-        } else {
-            localStorage.setItem('frostui-switch-demo-theme', theme);
-        }
-
         setTheme(theme);
+
+        try {
+            if (theme === 'system') {
+                localStorage.removeItem(themeKey);
+            } else {
+                localStorage.setItem(themeKey, theme);
+            }
+        } catch {
+            // Theme selection still applies for the current page.
+        }
     });
 
-    $.addEventDelegate(document, 'change.ui.switch', '#methods-switch', (event) => {
-        const entry = $.create('div', {
-            class: 'small font-monospace py-2 border-bottom',
-        });
-        const state = event.currentTarget.checked ? 'ON' : 'OFF';
+    $('#clear-log').addEvent('click', () => {
+        $('#event-log').empty();
+    });
 
-        $.setText(entry, `change.ui.switch — state: ${state}`);
-        $.append('#event-log', entry);
-        $.setScrollY('#event-log', $.height('#event-log', { boxSize: $.SCROLL_BOX }));
+    $('[data-ui-toggle="switch"]').switch();
+
+    $.addEventDelegate(document, 'change.ui.switch', '#methods-switch', (event) => {
+        const state = $.getProperty(event.currentTarget, 'checked') ? 'ON' : 'OFF';
+        logEvent(`change.ui.switch — state: ${state}`);
     });
 
     $('[data-demo-method]').addEvent('click', (event) => {
@@ -85,10 +112,4 @@ $.ready(() => {
             }
         }
     });
-
-    $.addEvent('#clear-events', 'click', (_) => {
-        $.empty('#event-log');
-    });
-
-    setTheme(document.documentElement.dataset.uiTheme || 'system');
 });
