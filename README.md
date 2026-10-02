@@ -17,46 +17,35 @@ Accessible toggle-switch control for Frost UI with configurable labels, semantic
 - Five Frost UI sizes with configurable text, semantic classes, and widths
 - Frost UI v4 light, dark, system, focus, disabled, and RTL presentation
 - Accessible switch role, state, required state, disabled state, and label association
-- Existing-instance reuse with frozen resolved options
 - Native `Switch` class and `switch` fQuery plugin
-- Reversible disposal that restores the input's original visibility and `tabindex`
+- Existing-instance reuse with frozen resolved options
 - Prebuilt ESM and UMD bundles with source maps
 - Expanded and minified component CSS with source maps
 - JSDoc-powered IntelliSense
+
+Explore [the demo](./demo/index.html) for interactive examples.
 
 ## Installation
 
 ### Browser projects / bundlers
 
-Install Switch with its Frost UI v4 and fQuery v5 peers:
-
 ```bash
-npm i @fr0st/ui-switch @fr0st/ui @fr0st/query
+npm i @fr0st/ui-switch
 ```
 
-The package root resolves to the compiled ESM bundle. Import both required stylesheets and the default component export:
+Frost UI Switch's package entry point is ESM-only and requires a browser DOM. Import the default `Switch` export and the stylesheets in browser projects and bundlers.
 
 ```js
 import '@fr0st/ui/dist/frost-ui.min.css';
 import '@fr0st/ui-switch/dist/frost-ui-switch.min.css';
 import Switch from '@fr0st/ui-switch';
-
-const notifications = Switch.init(
-    document.querySelector('#notifications'),
-    {
-        offText: 'Muted',
-        onText: 'Enabled',
-    },
-);
 ```
 
-`@fr0st/ui` and `@fr0st/query` are peer dependencies so the component shares the application's UI and fQuery instances. The package root, `dist/*`, and `src/*` are available through package exports.
-
-Switch requires a browser DOM or a compatible DOM environment configured through fQuery. Server-rendered applications should load the component on the client.
+`@fr0st/ui` and `@fr0st/query` are peer dependencies so the component shares the application's instances.
 
 ### Browser (ESM)
 
-The ESM bundle imports `@fr0st/ui` and `@fr0st/query`. Frost UI and fQuery also require `@fr0st/core`, so map all three dependencies when loading the bundle directly in a browser:
+The ESM bundle imports `@fr0st/ui` and `@fr0st/query`. fQuery also imports `@fr0st/core`, so map all three dependencies when loading the bundle directly in a browser:
 
 ```html
 <link
@@ -65,7 +54,6 @@ The ESM bundle imports `@fr0st/ui` and `@fr0st/query`. Frost UI and fQuery also 
 <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/@fr0st/ui-switch@latest/dist/frost-ui-switch.min.css">
-
 <script type="importmap">
 {
     "imports": {
@@ -77,35 +65,39 @@ The ESM bundle imports `@fr0st/ui` and `@fr0st/query`. Frost UI and fQuery also 
 </script>
 <script type="module">
     import Switch from 'https://cdn.jsdelivr.net/npm/@fr0st/ui-switch@latest/dist/frost-ui-switch.esm.min.js';
-
-    Switch.init(document.querySelector('#notifications'));
 </script>
 ```
 
 ### Browser (UMD)
 
-Load Frost UI's all-in-one bundle before Switch. The UI bundle supplies both the `UI` and `fQuery` globals expected by the component:
+Load the bundles from your own copy or a CDN:
 
 ```html
+<link
+    rel="stylesheet"
+    href="/path/to/dist/frost-ui.min.css">
+<link
+    rel="stylesheet"
+    href="/path/to/dist/frost-ui-switch.min.css">
+<script src="/path/to/dist/frost-ui-bundle.min.js"></script>
+<script src="/path/to/dist/frost-ui-switch.min.js"></script>
+<!-- or -->
 <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui.min.css">
 <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/@fr0st/ui-switch@latest/dist/frost-ui-switch.min.css">
-
 <script src="https://cdn.jsdelivr.net/npm/@fr0st/ui@latest/dist/frost-ui-bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@fr0st/ui-switch@latest/dist/frost-ui-switch.min.js"></script>
 <script>
-    const notifications = UI.Switch.init(
-        document.querySelector('#notifications'),
-    );
+    const { Switch } = globalThis.UI;
 </script>
 ```
 
-The UMD bundle adds `Switch` to the existing `globalThis.UI` object. It expects `globalThis.UI` and `globalThis.fQuery` to exist before it loads. If the non-bundled Frost UI build is used instead, load fQuery, Frost UI, and Switch in that order.
+The UMD bundle adds `Switch` to the existing `globalThis.UI` object. Load Frost UI's all-in-one bundle first; it supplies the `UI` and `fQuery` globals.
 
-Do not load the separate fQuery script when using `frost-ui-bundle.js` or `frost-ui-bundle.min.js`.
+The package root resolves to the prebuilt ESM bundle. Published files under `dist/` and `src/` are also available through matching package subpaths.
 
 ## Usage
 
@@ -138,17 +130,15 @@ const notifications = Switch.init(
 console.log(notifications.getState()); // true
 ```
 
-Calling `Switch.init()` again for the same input returns its existing instance. Dispose the current instance before reinitializing the input with different options.
-
 ## Options
 
 Options are resolved in this order:
 
-1. `Switch.defaults`
-2. The input's `data-ui-*` attributes
+1. Component defaults
+2. The element's `data-ui-*` attributes
 3. Options passed to `Switch.init()`
 
-Resolved `instance.options` are frozen.
+Resolved `instance.options` are shallow-frozen.
 
 `Switch.defaults` and `Switch.classes` are static properties defined on the class. Set application-wide defaults before initializing components:
 
@@ -193,7 +183,7 @@ If Switch is initialized while hidden, automatic sizing waits until the control 
 
 ## Data attributes
 
-All options can be supplied through `data-ui-*` attributes:
+Use kebab-case `data-ui-*` attributes for serializable options. Arrays and objects use JSON. Supply callbacks and DOM nodes through JavaScript.
 
 | Attribute | Example |
 | --- | --- |
@@ -221,19 +211,20 @@ All options can be supplied through `data-ui-*` attributes:
     data-ui-size="lg">
 ```
 
-The component still needs to be initialized through the class or fQuery plugin. The demo uses `data-ui-toggle="switch"` as a shared initialization selector:
-
 ```js
+import $ from '@fr0st/query';
+import '@fr0st/ui-switch';
+
 $('[data-ui-toggle="switch"]').switch();
 ```
 
-The `data-ui-toggle` attribute does not initialize Switch by itself.
+Data attributes configure options; they do not initialize Switch by themselves. Initialize the component through the class or fQuery plugin. Changing an option's data attribute after initialization does not reconfigure the existing instance.
 
 ## Methods
 
 | Method | Returns | Description |
 | --- | --- | --- |
-| `Switch.init(node, options?)` | `Switch` | Return the existing instance for an input or create one. |
+| `Switch.init(node, options?)` | `Switch` | Return the existing instance for an element or create one. |
 | `disable()` | `void` | Disable the checkbox, cancel any active drag, and make the rendered switch unavailable and unfocusable. |
 | `dispose()` | `void` | Remove generated markup and events, unregister component state, and restore the original input. |
 | `enable()` | `void` | Remove the checkbox's disabled attribute and refresh the rendered disabled state. |
@@ -251,11 +242,19 @@ switchControl.enable();
 switchControl.dispose();
 ```
 
-An instance also exposes its original input as `instance.node` and its frozen resolved configuration as `instance.options`. Both become `null` after disposal.
-
 Calling `disable()` during a drag restores the displayed position to the checkbox's current state without emitting a change event. Further movement and release from that drag do not toggle the checkbox.
 
 `dispose()` restores the input's original visually-hidden state, `aria-hidden`, and `tabindex`, preserves its current checked and disabled state and unrelated classes, and removes generated label IDs only if the application has not changed them. The input can then be initialized again with new options.
+
+## Lifecycle
+
+Calling `Switch.init()` again for the same element returns its existing instance. Dispose the current instance before reinitializing with different options.
+
+An instance exposes its original element as `instance.node` and its shallow-frozen resolved configuration as `instance.options`. Both become `null` after disposal.
+
+`dispose()` releases resources owned by the component and removes its registered instance. Repeated disposal is safe and does not affect a new instance initialized on the same element. Use a new instance before calling other methods after disposal.
+
+If initialization fails, the component releases resources it created and removes its registered instance before rethrowing the error. The element can then be initialized again.
 
 ## Events
 
@@ -305,7 +304,7 @@ $('#notifications').switch('enable');
 $('#notifications').switch('dispose');
 ```
 
-Pass an options object to initialize every matched input, or pass a public method name followed by its arguments. The first component or method result is returned.
+Pass an options object to initialize every matched element, or pass a public method name followed by its arguments. The first component or method result is returned.
 
 ## Accessibility
 
@@ -322,7 +321,9 @@ Applications remain responsible for a meaningful visible label, instructions, va
 
 ## Themes and RTL
 
-Switch combines its component stylesheet with Frost UI v4 CSS custom properties, focus-ring tokens, semantic text/background utilities, and disabled opacity. Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly:
+Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly.
+
+Switch combines its component stylesheet with Frost UI v4 CSS custom properties, focus-ring tokens, semantic text/background utilities, and disabled opacity.
 
 ```html
 <section data-ui-theme="dark">
@@ -341,9 +342,35 @@ Normal document and ancestor direction is respected. A `dir` attribute placed di
 
 In RTL layouts, the visual positions and physical drag direction are mirrored while checked state semantics remain unchanged.
 
+### Custom Sass builds
+
+Install Sass and create an application stylesheet to customize the component:
+
+```bash
+npm i -D sass
+```
+
+`src/styles.scss`
+
+```scss
+@use "@fr0st/ui-switch/src/scss/vars" with (
+    $switch-padding-x: 1.25rem,
+    $switch-border-radius: 999px
+);
+@use "@fr0st/ui-switch/src/scss/switch";
+```
+
+Compile the entry point with npm package resolution enabled:
+
+```bash
+npx sass --load-path=node_modules src/styles.scss dist/styles.css
+```
+
+Configure the [component variables](./src/scss/vars.scss) before loading the `switch` module. All variables have `!default` values. Include Frost UI CSS separately. Build tools that already resolve Sass modules from npm packages do not need the explicit load path.
+
 ## Development
 
-Use Node.js matching `^20.19.0 || ^22.13.0 || >=24`. Install dependencies with `npm ci`, then install Playwright browsers with `npx playwright install --with-deps`.
+Install dependencies with `npm ci`, then install Playwright browsers with `npx playwright install --with-deps`.
 
 ```bash
 npm test
@@ -351,13 +378,13 @@ npm run lint
 npm run build
 ```
 
-`npm test` rebuilds JavaScript and CSS, then runs the Playwright suite in Chromium, Firefox, and WebKit. `npm run test:browser` runs the suite against the existing bundles, so rebuild after changing source files.
+`npm test` rebuilds the bundles, then runs the Playwright suite in Chromium, Firefox, and WebKit. `npm run test:browser` runs the suite against the existing bundles, so rebuild after changing source files.
 
 After building, `npm run test:coverage` runs Chromium tests and writes coverage reports to `coverage/`.
 
 `npm run test:headed` and `npm run test:ui` also use the existing bundles and open headed browsers or the Playwright UI.
 
-`npm run lint:sass:unused` checks for unused Sass variables.
+To view the demo, open `demo/index.html` in your browser after building.
 
 ## License
 
