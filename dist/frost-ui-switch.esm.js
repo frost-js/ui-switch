@@ -74,14 +74,22 @@ var Switch = class Switch extends BaseComponent {
 	*/
 	constructor(node, options) {
 		super(node, options);
-		this.#form = this.node.form;
-		this.#targetState = this.getState();
-		const focused = $.is(this.node, ":focus");
-		this.#render();
-		this.#refresh();
-		this.#refreshDisabled();
-		this.#events();
-		if (focused) $.focus(this.#outerContainer);
+		try {
+			this.#form = this.node.form;
+			this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
+			this.#tabIndex = $.getAttribute(this.node, "tabindex");
+			this.#ariaHidden = $.getAttribute(this.node, "aria-hidden");
+			this.#targetState = this.getState();
+			const focused = $.is(this.node, ":focus");
+			this.#render();
+			this.#refresh();
+			this.#refreshDisabled();
+			this.#events();
+			if (focused) $.focus(this.#outerContainer);
+		} catch (error) {
+			this.dispose();
+			throw error;
+		}
 	}
 	/**
 	* Disables the Switch.
@@ -93,6 +101,7 @@ var Switch = class Switch extends BaseComponent {
 	}
 	/** @inheritdoc */
 	dispose() {
+		if (!this.node) return;
 		this.#cancelAnimation();
 		this.#clearClickSuppression();
 		this.#pendingResets.clear();
@@ -101,7 +110,7 @@ var Switch = class Switch extends BaseComponent {
 		$.remove(this.#outerContainer);
 		$.removeEvent(this.node, "focus.ui.switch");
 		$.removeEvent(this.node, "change.ui.switch");
-		if (this.#form) $.removeEvent(this.#form, "reset.ui.switch", this.#resetHandler);
+		if (this.#form && this.#resetHandler) $.removeEvent(this.#form, "reset.ui.switch", this.#resetHandler);
 		if (this.#hidden) $.addClass(this.node, this.constructor.classes.hide);
 		else $.removeClass(this.node, this.constructor.classes.hide);
 		if (this.#ariaHidden === null) $.removeAttribute(this.node, "aria-hidden");
@@ -346,9 +355,6 @@ var Switch = class Switch extends BaseComponent {
 	* Renders the Switch and records input and label attributes for disposal.
 	*/
 	#render() {
-		this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
-		this.#tabIndex = $.getAttribute(this.node, "tabindex");
-		this.#ariaHidden = $.getAttribute(this.node, "aria-hidden");
 		const labelledBy = /* @__PURE__ */ new Set();
 		const inputLabelledBy = $.getAttribute(this.node, "aria-labelledby");
 		if (inputLabelledBy) for (const id of inputLabelledBy.split(/\s+/)) labelledBy.add(id);

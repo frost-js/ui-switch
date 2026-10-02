@@ -106,14 +106,22 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		constructor(node, options) {
 			super(node, options);
-			this.#form = this.node.form;
-			this.#targetState = this.getState();
-			const focused = _fr0st_query.default.is(this.node, ":focus");
-			this.#render();
-			this.#refresh();
-			this.#refreshDisabled();
-			this.#events();
-			if (focused) _fr0st_query.default.focus(this.#outerContainer);
+			try {
+				this.#form = this.node.form;
+				this.#hidden = _fr0st_query.default.hasClass(this.node, this.constructor.classes.hide);
+				this.#tabIndex = _fr0st_query.default.getAttribute(this.node, "tabindex");
+				this.#ariaHidden = _fr0st_query.default.getAttribute(this.node, "aria-hidden");
+				this.#targetState = this.getState();
+				const focused = _fr0st_query.default.is(this.node, ":focus");
+				this.#render();
+				this.#refresh();
+				this.#refreshDisabled();
+				this.#events();
+				if (focused) _fr0st_query.default.focus(this.#outerContainer);
+			} catch (error) {
+				this.dispose();
+				throw error;
+			}
 		}
 		/**
 		* Disables the Switch.
@@ -125,6 +133,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		}
 		/** @inheritdoc */
 		dispose() {
+			if (!this.node) return;
 			this.#cancelAnimation();
 			this.#clearClickSuppression();
 			this.#pendingResets.clear();
@@ -133,7 +142,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.remove(this.#outerContainer);
 			_fr0st_query.default.removeEvent(this.node, "focus.ui.switch");
 			_fr0st_query.default.removeEvent(this.node, "change.ui.switch");
-			if (this.#form) _fr0st_query.default.removeEvent(this.#form, "reset.ui.switch", this.#resetHandler);
+			if (this.#form && this.#resetHandler) _fr0st_query.default.removeEvent(this.#form, "reset.ui.switch", this.#resetHandler);
 			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
 			if (this.#ariaHidden === null) _fr0st_query.default.removeAttribute(this.node, "aria-hidden");
@@ -378,9 +387,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Renders the Switch and records input and label attributes for disposal.
 		*/
 		#render() {
-			this.#hidden = _fr0st_query.default.hasClass(this.node, this.constructor.classes.hide);
-			this.#tabIndex = _fr0st_query.default.getAttribute(this.node, "tabindex");
-			this.#ariaHidden = _fr0st_query.default.getAttribute(this.node, "aria-hidden");
 			const labelledBy = /* @__PURE__ */ new Set();
 			const inputLabelledBy = _fr0st_query.default.getAttribute(this.node, "aria-labelledby");
 			if (inputLabelledBy) for (const id of inputLabelledBy.split(/\s+/)) labelledBy.add(id);
