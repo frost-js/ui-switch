@@ -4,7 +4,7 @@ test.describe('Switch hidden initialization', () => {
     test.beforeEach(async ({ page }) => {
         await page.evaluate(() => {
             $.setHtml(document.body, '<div id="panel" hidden><input id="switch" type="checkbox"></div>');
-            window.switchObservers = new Set;
+            window.switchObservers = new Set();
             window.ResizeObserver = class extends window.ResizeObserver {
                 /** @inheritdoc */
                 disconnect() {
