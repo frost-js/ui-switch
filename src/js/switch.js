@@ -56,12 +56,12 @@ export default class Switch extends BaseComponent {
     #divider;
     #dragActive = false;
     #form;
-    #generatedLabelIds = new Map;
+    #generatedLabelIds = new Map();
     #hidden;
     #offToggle;
     #onToggle;
     #outerContainer;
-    #pendingResets = new Map;
+    #pendingResets = new Map();
     #resetHandler;
     #resizeObserver;
     #rtl = false;
@@ -249,7 +249,7 @@ export default class Switch extends BaseComponent {
         $.css(this.#container, 'transform');
         $.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
 
-        waitForTransition(this.#container, ['transform']).then((_) => {
+        waitForTransition(this.#container, ['transform']).then(() => {
             // A reset may have restored the checkbox before its deferred refresh.
             if (
                 animationId !== this.#animationId ||
@@ -329,39 +329,39 @@ export default class Switch extends BaseComponent {
             $.addEvent(this.#form, 'reset.ui.switch', this.#resetHandler);
         }
 
-        $.addEvent(this.node, 'focus.ui.switch', (_) => {
+        $.addEvent(this.node, 'focus.ui.switch', () => {
             $.focus(this.#outerContainer);
         });
 
-        $.addEvent(this.node, 'change.ui.switch', (e) => {
-            if (e.skipUpdate || this.#sliding) {
+        $.addEvent(this.node, 'change.ui.switch', (event) => {
+            if (event.skipUpdate || this.#sliding) {
                 return;
             }
 
             this.#animateState(this.getState());
         });
 
-        $.addEvent(this.#outerContainer, 'keydown.ui.switch', (e) => {
+        $.addEvent(this.#outerContainer, 'keydown.ui.switch', (event) => {
             if (
-                !['Enter', 'Space'].includes(e.code) ||
+                !['Enter', 'Space'].includes(event.code) ||
                 $.is(this.node, ':disabled')
             ) {
                 return;
             }
 
-            e.preventDefault();
+            event.preventDefault();
 
-            if (!e.repeat) {
+            if (!event.repeat) {
                 this.toggleState();
             }
         });
 
-        $.addEvent(this.#outerContainer, 'click.ui.switch', (e) => {
-            if (e.button || $.is(this.node, ':disabled')) {
+        $.addEvent(this.#outerContainer, 'click.ui.switch', (event) => {
+            if (event.button || $.is(this.node, ':disabled')) {
                 return;
             }
 
-            e.preventDefault();
+            event.preventDefault();
 
             if (this.#suppressClickTimer !== null) {
                 this.#clearClickSuppression();
@@ -376,16 +376,16 @@ export default class Switch extends BaseComponent {
         let dragOffsetX = 0;
 
         const dragEvent = $.mouseDragFactory(
-            (e) => {
+            (event) => {
                 if (
                     !this.node ||
-                    (e.type === 'mousedown' && e.button !== 0) ||
+                    (event.type === 'mousedown' && event.button !== 0) ||
                     $.is(this.node, ':disabled')
                 ) {
                     return false;
                 }
 
-                const { x } = getPosition(e);
+                const { x } = getPosition(event);
 
                 if (!Number.isFinite(x)) {
                     return false;
@@ -400,12 +400,12 @@ export default class Switch extends BaseComponent {
 
                 $.focus(this.#outerContainer);
             },
-            (e) => {
+            (event) => {
                 if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) {
                     return;
                 }
 
-                const { x } = getPosition(e);
+                const { x } = getPosition(event);
 
                 if (!Number.isFinite(x)) {
                     return;
@@ -423,8 +423,8 @@ export default class Switch extends BaseComponent {
                     $.addClass(this.#outerContainer, this.constructor.classes.dragging);
                 }
 
-                if (e.cancelable) {
-                    e.preventDefault();
+                if (event.cancelable) {
+                    event.preventDefault();
                 }
 
                 const minX = this.#rtl ? 0 : -this.#toggleWidth;
@@ -434,7 +434,7 @@ export default class Switch extends BaseComponent {
 
                 $.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
             },
-            (_) => {
+            () => {
                 const dragActive = this.#dragActive;
                 this.#dragActive = false;
 
@@ -558,7 +558,7 @@ export default class Switch extends BaseComponent {
      * Renders the Switch and records input and label attributes for disposal.
      */
     #render() {
-        const labelledBy = new Set;
+        const labelledBy = new Set();
         const inputLabelledBy = $.getAttribute(this.node, 'aria-labelledby');
 
         if (inputLabelledBy) {
@@ -688,7 +688,7 @@ export default class Switch extends BaseComponent {
         this.#clearClickSuppression();
 
         this.#suppressClickTimer = window.setTimeout(
-            (_) => this.#clearClickSuppression(),
+            () => this.#clearClickSuppression(),
             500,
         );
     }

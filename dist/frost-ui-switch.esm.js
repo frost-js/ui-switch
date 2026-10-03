@@ -184,7 +184,7 @@ var Switch = class Switch extends BaseComponent {
 		});
 		$.css(this.#container, "transform");
 		$.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
-		waitForTransition(this.#container, ["transform"]).then((_) => {
+		waitForTransition(this.#container, ["transform"]).then(() => {
 			if (animationId !== this.#animationId || !this.node || [...this.#pendingResets].some(([event, resetAnimationId]) => resetAnimationId === animationId && !event.defaultPrevented)) return;
 			this.#animating = false;
 			this.#currentX = targetX;
@@ -232,21 +232,21 @@ var Switch = class Switch extends BaseComponent {
 			};
 			$.addEvent(this.#form, "reset.ui.switch", this.#resetHandler);
 		}
-		$.addEvent(this.node, "focus.ui.switch", (_) => {
+		$.addEvent(this.node, "focus.ui.switch", () => {
 			$.focus(this.#outerContainer);
 		});
-		$.addEvent(this.node, "change.ui.switch", (e) => {
-			if (e.skipUpdate || this.#sliding) return;
+		$.addEvent(this.node, "change.ui.switch", (event) => {
+			if (event.skipUpdate || this.#sliding) return;
 			this.#animateState(this.getState());
 		});
-		$.addEvent(this.#outerContainer, "keydown.ui.switch", (e) => {
-			if (!["Enter", "Space"].includes(e.code) || $.is(this.node, ":disabled")) return;
-			e.preventDefault();
-			if (!e.repeat) this.toggleState();
+		$.addEvent(this.#outerContainer, "keydown.ui.switch", (event) => {
+			if (!["Enter", "Space"].includes(event.code) || $.is(this.node, ":disabled")) return;
+			event.preventDefault();
+			if (!event.repeat) this.toggleState();
 		});
-		$.addEvent(this.#outerContainer, "click.ui.switch", (e) => {
-			if (e.button || $.is(this.node, ":disabled")) return;
-			e.preventDefault();
+		$.addEvent(this.#outerContainer, "click.ui.switch", (event) => {
+			if (event.button || $.is(this.node, ":disabled")) return;
+			event.preventDefault();
 			if (this.#suppressClickTimer !== null) {
 				this.#clearClickSuppression();
 				return;
@@ -256,9 +256,9 @@ var Switch = class Switch extends BaseComponent {
 		});
 		let dragStartX = 0;
 		let dragOffsetX = 0;
-		const dragEvent = $.mouseDragFactory((e) => {
-			if (!this.node || e.type === "mousedown" && e.button !== 0 || $.is(this.node, ":disabled")) return false;
-			const { x } = getPosition(e);
+		const dragEvent = $.mouseDragFactory((event) => {
+			if (!this.node || event.type === "mousedown" && event.button !== 0 || $.is(this.node, ":disabled")) return false;
+			const { x } = getPosition(event);
 			if (!Number.isFinite(x)) return false;
 			this.#cancelAnimation();
 			this.#dragActive = true;
@@ -266,21 +266,21 @@ var Switch = class Switch extends BaseComponent {
 			dragStartX = x;
 			dragOffsetX = x - this.#currentX;
 			$.focus(this.#outerContainer);
-		}, (e) => {
+		}, (event) => {
 			if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
-			const { x } = getPosition(e);
+			const { x } = getPosition(event);
 			if (!Number.isFinite(x)) return;
 			if (!this.#sliding && Math.abs(x - dragStartX) < Switch.#DRAG_THRESHOLD) return;
 			if (!this.#sliding) {
 				this.#sliding = true;
 				$.addClass(this.#outerContainer, this.constructor.classes.dragging);
 			}
-			if (e.cancelable) e.preventDefault();
+			if (event.cancelable) event.preventDefault();
 			const minX = this.#rtl ? 0 : -this.#toggleWidth;
 			const maxX = this.#rtl ? this.#toggleWidth : 0;
 			this.#currentX = $._clamp(x - dragOffsetX, minX, maxX);
 			$.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
-		}, (_) => {
+		}, () => {
 			const dragActive = this.#dragActive;
 			this.#dragActive = false;
 			if (!this.node) return;
@@ -449,7 +449,7 @@ var Switch = class Switch extends BaseComponent {
 	*/
 	#suppressNextClick() {
 		this.#clearClickSuppression();
-		this.#suppressClickTimer = window.setTimeout((_) => this.#clearClickSuppression(), 500);
+		this.#suppressClickTimer = window.setTimeout(() => this.#clearClickSuppression(), 500);
 	}
 };
 

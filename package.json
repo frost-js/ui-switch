@@ -30,6 +30,7 @@
             "default": "./dist/frost-ui-switch.esm.js"
         },
         "./dist/*": "./dist/*",
+        "./src/scss/vars.scss": "./src/scss/_vars.scss",
         "./src/*": "./src/*"
     },
     "main": "./dist/frost-ui-switch.esm.js",

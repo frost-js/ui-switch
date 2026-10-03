@@ -216,7 +216,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			});
 			_fr0st_query.default.css(this.#container, "transform");
 			_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${targetX}px)` });
-			(0, _fr0st_ui.waitForTransition)(this.#container, ["transform"]).then((_) => {
+			(0, _fr0st_ui.waitForTransition)(this.#container, ["transform"]).then(() => {
 				if (animationId !== this.#animationId || !this.node || [...this.#pendingResets].some(([event, resetAnimationId]) => resetAnimationId === animationId && !event.defaultPrevented)) return;
 				this.#animating = false;
 				this.#currentX = targetX;
@@ -264,21 +264,21 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				};
 				_fr0st_query.default.addEvent(this.#form, "reset.ui.switch", this.#resetHandler);
 			}
-			_fr0st_query.default.addEvent(this.node, "focus.ui.switch", (_) => {
+			_fr0st_query.default.addEvent(this.node, "focus.ui.switch", () => {
 				_fr0st_query.default.focus(this.#outerContainer);
 			});
-			_fr0st_query.default.addEvent(this.node, "change.ui.switch", (e) => {
-				if (e.skipUpdate || this.#sliding) return;
+			_fr0st_query.default.addEvent(this.node, "change.ui.switch", (event) => {
+				if (event.skipUpdate || this.#sliding) return;
 				this.#animateState(this.getState());
 			});
-			_fr0st_query.default.addEvent(this.#outerContainer, "keydown.ui.switch", (e) => {
-				if (!["Enter", "Space"].includes(e.code) || _fr0st_query.default.is(this.node, ":disabled")) return;
-				e.preventDefault();
-				if (!e.repeat) this.toggleState();
+			_fr0st_query.default.addEvent(this.#outerContainer, "keydown.ui.switch", (event) => {
+				if (!["Enter", "Space"].includes(event.code) || _fr0st_query.default.is(this.node, ":disabled")) return;
+				event.preventDefault();
+				if (!event.repeat) this.toggleState();
 			});
-			_fr0st_query.default.addEvent(this.#outerContainer, "click.ui.switch", (e) => {
-				if (e.button || _fr0st_query.default.is(this.node, ":disabled")) return;
-				e.preventDefault();
+			_fr0st_query.default.addEvent(this.#outerContainer, "click.ui.switch", (event) => {
+				if (event.button || _fr0st_query.default.is(this.node, ":disabled")) return;
+				event.preventDefault();
 				if (this.#suppressClickTimer !== null) {
 					this.#clearClickSuppression();
 					return;
@@ -288,9 +288,9 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			});
 			let dragStartX = 0;
 			let dragOffsetX = 0;
-			const dragEvent = _fr0st_query.default.mouseDragFactory((e) => {
-				if (!this.node || e.type === "mousedown" && e.button !== 0 || _fr0st_query.default.is(this.node, ":disabled")) return false;
-				const { x } = (0, _fr0st_ui.getPosition)(e);
+			const dragEvent = _fr0st_query.default.mouseDragFactory((event) => {
+				if (!this.node || event.type === "mousedown" && event.button !== 0 || _fr0st_query.default.is(this.node, ":disabled")) return false;
+				const { x } = (0, _fr0st_ui.getPosition)(event);
 				if (!Number.isFinite(x)) return false;
 				this.#cancelAnimation();
 				this.#dragActive = true;
@@ -298,21 +298,21 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				dragStartX = x;
 				dragOffsetX = x - this.#currentX;
 				_fr0st_query.default.focus(this.#outerContainer);
-			}, (e) => {
+			}, (event) => {
 				if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
-				const { x } = (0, _fr0st_ui.getPosition)(e);
+				const { x } = (0, _fr0st_ui.getPosition)(event);
 				if (!Number.isFinite(x)) return;
 				if (!this.#sliding && Math.abs(x - dragStartX) < Switch.#DRAG_THRESHOLD) return;
 				if (!this.#sliding) {
 					this.#sliding = true;
 					_fr0st_query.default.addClass(this.#outerContainer, this.constructor.classes.dragging);
 				}
-				if (e.cancelable) e.preventDefault();
+				if (event.cancelable) event.preventDefault();
 				const minX = this.#rtl ? 0 : -this.#toggleWidth;
 				const maxX = this.#rtl ? this.#toggleWidth : 0;
 				this.#currentX = _fr0st_query.default._clamp(x - dragOffsetX, minX, maxX);
 				_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
-			}, (_) => {
+			}, () => {
 				const dragActive = this.#dragActive;
 				this.#dragActive = false;
 				if (!this.node) return;
@@ -481,7 +481,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		#suppressNextClick() {
 			this.#clearClickSuppression();
-			this.#suppressClickTimer = window.setTimeout((_) => this.#clearClickSuppression(), 500);
+			this.#suppressClickTimer = window.setTimeout(() => this.#clearClickSuppression(), 500);
 		}
 	};
 
