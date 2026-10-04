@@ -1,6 +1,6 @@
 {
     "name": "@fr0st/ui-switch",
-    "version": "3.0.0",
+    "version": "3.1.0",
     "private": false,
     "description": "Customizable toggle switch component for Frost UI with keyboard, pointer, and touch interaction.",
     "keywords": [
