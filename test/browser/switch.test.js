@@ -599,6 +599,87 @@ test.describe('Switch', () => {
             await expect(outer).toHaveAttribute('aria-required', 'true');
         });
 
+        test('renders an unlabelled input without an invalid label reference', async ({ page }) => {
+            await page.evaluate(() => {
+                UI.Switch.init($.findOne('#switch'), { animate: false });
+            });
+
+            const outer = page.locator('.switch-outer');
+            await expect(outer).not.toHaveAttribute('aria-labelledby');
+            await expect(outer).not.toHaveAttribute('aria-label');
+        });
+
+        test('inherits an explicit aria-label', async ({ page }) => {
+            await page.evaluate(() => {
+                $.setAttribute('#switch', { 'aria-label': 'Notifications' });
+                UI.Switch.init($.findOne('#switch'), { animate: false });
+            });
+
+            await expect(page.locator('.switch-outer')).toHaveAttribute(
+                'aria-label',
+                'Notifications',
+            );
+        });
+
+        test('uses existing and generated explicit label IDs safely', async ({ page }) => {
+            await page.evaluate(() => {
+                $.setHtml(
+                    document.body,
+                    '<label id="first-label">First</label><label>Second</label><input type="checkbox">',
+                );
+                const input = $.findOne('input');
+                $.setProperty(input, 'id', 'switch"][data-invalid="');
+                const labels = $.find('label');
+                $.setProperty(labels[0], 'htmlFor', $.getProperty(input, 'id'));
+                $.setProperty(labels[1], 'htmlFor', $.getProperty(input, 'id'));
+                UI.Switch.init(input, { animate: false });
+            });
+
+            await expect(page.locator('label').nth(1)).toHaveAttribute(
+                'id',
+                /^switch-label/,
+            );
+            await expect(page.locator('.switch-outer')).toHaveAttribute(
+                'aria-labelledby',
+                /^first-label switch-label/,
+            );
+        });
+
+        test('combines input and associated label references', async ({ page }) => {
+            await page.evaluate(() => {
+                $.setHtml(document.body,
+                    '<span id="description">Description</span>' +
+                    '<label id="label" for="switch">Label</label>' +
+                    '<input id="switch" type="checkbox" aria-labelledby="description">',
+                );
+                UI.Switch.init($.findOne('#switch'), { animate: false });
+            });
+
+            await expect(page.locator('.switch-outer')).toHaveAttribute(
+                'aria-labelledby',
+                'description label',
+            );
+        });
+
+        test('supports a wrapping label', async ({ page }) => {
+            await page.evaluate(() => {
+                $.setHtml(
+                    document.body,
+                    '<label id="wrapper">Notifications <input id="switch" type="checkbox"></label>',
+                );
+                UI.Switch.init($.findOne('#switch'), { animate: false });
+            });
+
+            const outer = page.locator('.switch-outer');
+            await expect(outer).toHaveAttribute('aria-labelledby', 'wrapper');
+            await expect(page.getByRole('switch', { name: 'Notifications' })).toHaveCount(1);
+            await expect(page.getByRole('checkbox')).toHaveCount(0);
+            await outer.click();
+            await expect(page.locator('#switch')).toBeChecked();
+            await page.locator('#wrapper').click({ position: { x: 2, y: 2 } });
+            await expect(page.locator('#switch')).not.toBeChecked();
+        });
+
         test.describe('native updates', () => {
             test.use({ mockClock: true });
 
@@ -738,87 +819,6 @@ test.describe('Switch', () => {
                     expect(await page.evaluate(() => window.disabledChanges)).toBe(1);
                 });
             }
-        });
-
-        test('renders an unlabelled input without an invalid label reference', async ({ page }) => {
-            await page.evaluate(() => {
-                UI.Switch.init($.findOne('#switch'), { animate: false });
-            });
-
-            const outer = page.locator('.switch-outer');
-            await expect(outer).not.toHaveAttribute('aria-labelledby');
-            await expect(outer).not.toHaveAttribute('aria-label');
-        });
-
-        test('inherits an explicit aria-label', async ({ page }) => {
-            await page.evaluate(() => {
-                $.setAttribute('#switch', { 'aria-label': 'Notifications' });
-                UI.Switch.init($.findOne('#switch'), { animate: false });
-            });
-
-            await expect(page.locator('.switch-outer')).toHaveAttribute(
-                'aria-label',
-                'Notifications',
-            );
-        });
-
-        test('uses existing and generated explicit label IDs safely', async ({ page }) => {
-            await page.evaluate(() => {
-                $.setHtml(
-                    document.body,
-                    '<label id="first-label">First</label><label>Second</label><input type="checkbox">',
-                );
-                const input = $.findOne('input');
-                $.setProperty(input, 'id', 'switch"][data-invalid="');
-                const labels = $.find('label');
-                $.setProperty(labels[0], 'htmlFor', $.getProperty(input, 'id'));
-                $.setProperty(labels[1], 'htmlFor', $.getProperty(input, 'id'));
-                UI.Switch.init(input, { animate: false });
-            });
-
-            await expect(page.locator('label').nth(1)).toHaveAttribute(
-                'id',
-                /^switch-label/,
-            );
-            await expect(page.locator('.switch-outer')).toHaveAttribute(
-                'aria-labelledby',
-                /^first-label switch-label/,
-            );
-        });
-
-        test('combines input and associated label references', async ({ page }) => {
-            await page.evaluate(() => {
-                $.setHtml(document.body,
-                    '<span id="description">Description</span>' +
-                    '<label id="label" for="switch">Label</label>' +
-                    '<input id="switch" type="checkbox" aria-labelledby="description">',
-                );
-                UI.Switch.init($.findOne('#switch'), { animate: false });
-            });
-
-            await expect(page.locator('.switch-outer')).toHaveAttribute(
-                'aria-labelledby',
-                'description label',
-            );
-        });
-
-        test('supports a wrapping label', async ({ page }) => {
-            await page.evaluate(() => {
-                $.setHtml(
-                    document.body,
-                    '<label id="wrapper">Notifications <input id="switch" type="checkbox"></label>',
-                );
-                UI.Switch.init($.findOne('#switch'), { animate: false });
-            });
-
-            const outer = page.locator('.switch-outer');
-            await expect(outer).toHaveAttribute('aria-labelledby', 'wrapper');
-            await expect(page.getByRole('switch', { name: 'Notifications' })).toHaveCount(1);
-            await expect(page.getByRole('checkbox')).toHaveCount(0);
-            await outer.click();
-            await expect(page.locator('#switch')).toBeChecked();
-            await page.locator('#wrapper').click({ position: { x: 2, y: 2 } });
-            await expect(page.locator('#switch')).not.toBeChecked();
         });
     });
 
