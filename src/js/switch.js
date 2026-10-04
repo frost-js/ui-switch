@@ -3,6 +3,13 @@ import { BaseComponent, generateId, getPosition, waitForTransition } from '@fr0s
 
 const window = $.getWindow();
 
+const ariaAttributes = [
+    'aria-describedby',
+    'aria-errormessage',
+    'aria-invalid',
+    'aria-required',
+];
+
 /**
  * @typedef {object} SwitchOptions
  * @property {boolean} [animate=true] Whether to transition state changes.
@@ -58,6 +65,7 @@ export default class Switch extends BaseComponent {
     #form;
     #generatedLabelIds = new Map();
     #hidden;
+    #observer;
     #offToggle;
     #onToggle;
     #outerContainer;
@@ -96,7 +104,7 @@ export default class Switch extends BaseComponent {
 
             this.#render();
             this.#refresh();
-            this.#refreshDisabled();
+            this.#refreshState();
             this.#events();
 
             if (focused) {
@@ -113,12 +121,7 @@ export default class Switch extends BaseComponent {
      */
     disable() {
         $.setAttribute(this.node, { disabled: true });
-
-        if (this.#dragActive) {
-            this.#resetState();
-        }
-
-        this.#refreshDisabled();
+        this.#refreshState();
     }
 
     /** @inheritdoc */
@@ -132,6 +135,7 @@ export default class Switch extends BaseComponent {
         this.#pendingResets.clear();
 
         this.#resizeObserver?.disconnect();
+        this.#observer?.disconnect();
 
         for (const [label, id] of this.#generatedLabelIds || []) {
             if ($.getAttribute(label, 'id') === id) {
@@ -169,6 +173,7 @@ export default class Switch extends BaseComponent {
         this.#divider = null;
         this.#form = null;
         this.#generatedLabelIds = null;
+        this.#observer = null;
         this.#offToggle = null;
         this.#onToggle = null;
         this.#outerContainer = null;
@@ -183,7 +188,7 @@ export default class Switch extends BaseComponent {
      */
     enable() {
         $.removeAttribute(this.node, 'disabled');
-        this.#refreshDisabled();
+        this.#refreshState();
     }
 
     /**
@@ -345,6 +350,24 @@ export default class Switch extends BaseComponent {
 
             this.#animateState(this.getState());
         });
+
+        this.#observer = new window.MutationObserver(() => {
+            if (!this.node) {
+                return;
+            }
+
+            this.#refreshState();
+        });
+        this.#observer.observe(this.node, {
+            attributes: true,
+            attributeFilter: ['disabled', 'required', ...ariaAttributes],
+        });
+        for (const fieldset of $.parents(this.node, 'fieldset')) {
+            this.#observer.observe(fieldset, {
+                attributes: true,
+                attributeFilter: ['disabled'],
+            });
+        }
 
         $.addEvent(this.#outerContainer, 'keydown.ui.switch', (event) => {
             if (
@@ -550,12 +573,16 @@ export default class Switch extends BaseComponent {
     }
 
     /**
-     * Synchronizes disabled styling and focusability with the checkbox.
+     * Synchronizes disabled styling, focusability, and inherited accessibility attributes.
      */
-    #refreshDisabled() {
+    #refreshState() {
         const disabled = $.is(this.node, ':disabled');
 
         if (disabled) {
+            if (this.#dragActive) {
+                this.#resetState();
+            }
+
             $.addClass(this.#outerContainer, this.constructor.classes.disabled);
         } else {
             $.removeClass(this.#outerContainer, this.constructor.classes.disabled);
@@ -565,6 +592,19 @@ export default class Switch extends BaseComponent {
             'aria-disabled': disabled,
             'tabindex': disabled ? -1 : 0,
         });
+
+        for (const attribute of ariaAttributes) {
+            let value = $.getAttribute(this.node, attribute);
+            if (attribute === 'aria-required' && value === null) {
+                value = Boolean($.getProperty(this.node, 'required'));
+            }
+
+            if (value === null) {
+                $.removeAttribute(this.#outerContainer, attribute);
+            } else {
+                $.setAttribute(this.#outerContainer, { [attribute]: value });
+            }
+        }
     }
 
     /**
@@ -595,7 +635,6 @@ export default class Switch extends BaseComponent {
         const attributes = {
             'role': 'switch',
             'aria-checked': this.getState(),
-            'aria-required': Boolean($.getProperty(this.node, 'required')),
         };
         const direction = $.getAttribute(this.node, 'dir');
         const ariaLabel = $.getAttribute(this.node, 'aria-label');

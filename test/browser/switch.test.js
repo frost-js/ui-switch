@@ -302,6 +302,28 @@ test.describe('Switch', () => {
             await expect(page.locator('#switch')).toBeChecked();
         });
 
+        test('stops native synchronization after disposal with pending mutations', async ({ page }) => {
+            const outer = await page.evaluateHandle(() => {
+                $.setHtml(document.body, '<fieldset id="fieldset"><input id="switch" type="checkbox"></fieldset>');
+                const input = $.findOne('#switch');
+                const component = UI.Switch.init(input, { animate: false });
+                const outer = $.prev(input).shift();
+                $.setProperty(input, { disabled: true, required: true });
+                $.setAttribute(input, { 'aria-invalid': 'true' });
+                component.dispose();
+                $.setProperty('#fieldset', 'disabled', true);
+                return outer;
+            });
+
+            await expect(page.locator('.switch-outer')).toHaveCount(0);
+            expect(await outer.evaluate((node) => $.getAttribute(node, 'aria-disabled'))).toBe('false');
+            expect(await outer.evaluate((node) => $.getAttribute(node, 'aria-required'))).toBe('false');
+            expect(await outer.evaluate((node) => $.getAttribute(node, 'aria-invalid'))).toBeNull();
+            await expect(page.locator('#switch')).toBeDisabled();
+            await expect(page.locator('#switch')).toHaveAttribute('required', '');
+            await expect(page.locator('#switch')).toHaveAttribute('aria-invalid', 'true');
+        });
+
         test('disposes safely after a touch interrupts an animation', async ({ page }) => {
             const errors = [];
             page.on('pageerror', (error) => errors.push(error.message));
@@ -557,6 +579,165 @@ test.describe('Switch', () => {
             await expect(outer).toHaveClass(/switch-disabled/);
             await expect(outer).toHaveCSS('opacity', '0.5');
             await expect(outer).toHaveCSS('pointer-events', 'none');
+        });
+
+        test('inherits validation ARIA attributes', async ({ page }) => {
+            await page.evaluate(() => {
+                $.setAttribute('#switch', {
+                    'aria-describedby': 'hint',
+                    'aria-errormessage': 'error',
+                    'aria-invalid': 'true',
+                    'aria-required': 'true',
+                });
+                UI.Switch.init($.findOne('#switch'), { animate: false });
+            });
+
+            const outer = page.locator('.switch-outer');
+            await expect(outer).toHaveAttribute('aria-describedby', 'hint');
+            await expect(outer).toHaveAttribute('aria-errormessage', 'error');
+            await expect(outer).toHaveAttribute('aria-invalid', 'true');
+            await expect(outer).toHaveAttribute('aria-required', 'true');
+        });
+
+        test.describe('native updates', () => {
+            test.use({ mockClock: true });
+
+            test('synchronizes native disabled changes', async ({ page }) => {
+                await page.evaluate(() => UI.Switch.init($.findOne('#switch'), { animate: false }));
+                const outer = page.locator('.switch-outer');
+
+                await page.evaluate(() => $.setProperty('#switch', 'disabled', true));
+                await expect(outer).toHaveClass(/\bswitch-disabled\b/);
+                await expect(outer).toHaveAttribute('aria-disabled', 'true');
+                await expect(outer).toHaveAttribute('tabindex', '-1');
+
+                await page.evaluate(() => $.setProperty('#switch', 'disabled', false));
+                await expect(outer).not.toHaveClass(/\bswitch-disabled\b/);
+                await expect(outer).toHaveAttribute('aria-disabled', 'false');
+                await expect(outer).toHaveAttribute('tabindex', '0');
+                await outer.click();
+                await expect(page.locator('#switch')).toBeChecked();
+            });
+
+            test('synchronizes native required changes and preserves explicit aria-required', async ({ page }) => {
+                await page.evaluate(() => UI.Switch.init($.findOne('#switch'), { animate: false }));
+                const outer = page.locator('.switch-outer');
+
+                await page.evaluate(() => $.setProperty('#switch', 'required', true));
+                await expect(outer).toHaveAttribute('aria-required', 'true');
+
+                await page.evaluate(() => $.setAttribute('#switch', { 'aria-required': 'false' }));
+                await expect(outer).toHaveAttribute('aria-required', 'false');
+
+                await page.evaluate(() => $.removeAttribute('#switch', 'aria-required'));
+                await expect(outer).toHaveAttribute('aria-required', 'true');
+
+                await page.evaluate(() => $.setProperty('#switch', 'required', false));
+                await expect(outer).toHaveAttribute('aria-required', 'false');
+            });
+
+            test('synchronizes nested fieldsets and respects the first legend exemption', async ({ page }) => {
+                await page.evaluate(() => {
+                    $.setHtml(document.body, `
+                        <fieldset id="outer" disabled>
+                            <legend><input id="legend-switch" type="checkbox"></legend>
+                            <fieldset id="inner"><input id="switch" type="checkbox"></fieldset>
+                        </fieldset>
+                    `);
+                    UI.Switch.init($.findOne('#legend-switch'), { animate: false });
+                    UI.Switch.init($.findOne('#switch'), { animate: false });
+                });
+                const outer = page.locator('#inner .switch-outer');
+                const legend = page.locator('legend .switch-outer');
+                await expect(outer).toHaveAttribute('aria-disabled', 'true');
+                await expect(legend).toHaveAttribute('aria-disabled', 'false');
+                await expect(legend).toHaveAttribute('tabindex', '0');
+
+                await page.evaluate(() => $.setProperty('#outer', 'disabled', false));
+                await expect(outer).toHaveAttribute('aria-disabled', 'false');
+
+                await page.evaluate(() => $.setProperty('#outer', 'disabled', true));
+                await expect(outer).toHaveClass(/\bswitch-disabled\b/);
+                await expect(outer).toHaveAttribute('aria-disabled', 'true');
+                await expect(outer).toHaveAttribute('tabindex', '-1');
+                await expect(legend).not.toHaveClass(/\bswitch-disabled\b/);
+                await expect(legend).toHaveAttribute('aria-disabled', 'false');
+                await legend.click();
+                await expect(page.locator('#legend-switch')).toBeChecked();
+
+                await page.evaluate(() => {
+                    $.setProperty('#inner', 'disabled', true);
+                    $.setProperty('#outer', 'disabled', false);
+                });
+                await expect(outer).toHaveAttribute('aria-disabled', 'true');
+
+                await page.evaluate(() => $.setProperty('#inner', 'disabled', false));
+                await expect(outer).not.toHaveClass(/\bswitch-disabled\b/);
+                await expect(outer).toHaveAttribute('aria-disabled', 'false');
+                await expect(outer).toHaveAttribute('tabindex', '0');
+            });
+
+            for (const { attribute, values } of [
+                { attribute: 'aria-describedby', values: ['first-hint', 'second-hint'] },
+                { attribute: 'aria-errormessage', values: ['first-error', 'second-error'] },
+                { attribute: 'aria-invalid', values: ['true', 'false'] },
+                { attribute: 'aria-required', values: ['true', 'false'] },
+            ]) {
+                test(`synchronizes native ${attribute} updates and removal`, async ({ page }) => {
+                    await page.evaluate(() => UI.Switch.init($.findOne('#switch'), { animate: false }));
+                    const outer = page.locator('.switch-outer');
+
+                    for (const value of values) {
+                        await page.evaluate(({ attribute, value }) => {
+                            $.setAttribute('#switch', { [attribute]: value });
+                        }, { attribute, value });
+                        await expect(outer).toHaveAttribute(attribute, value);
+                    }
+
+                    await page.evaluate((attribute) => $.removeAttribute('#switch', attribute), attribute);
+                    if (attribute === 'aria-required') {
+                        await expect(outer).toHaveAttribute(attribute, 'false');
+                    } else {
+                        await expect(outer).not.toHaveAttribute(attribute);
+                    }
+                    await expect(page.locator('#switch')).toHaveAttribute('aria-hidden', 'true');
+                });
+            }
+
+            for (const target of ['#switch', '#fieldset']) {
+                test(`cancels an active drag when ${target} becomes disabled`, async ({ page }) => {
+                    await page.evaluate(() => {
+                        $.setHtml(document.body, '<fieldset id="fieldset"><input id="switch" type="checkbox"></fieldset>');
+                        const input = $.findOne('#switch');
+                        UI.Switch.init(input, { animate: false, labelWidth: 80 });
+                        window.disabledChanges = 0;
+                        $.addEvent(input, 'change.ui.switch', () => window.disabledChanges++);
+                        $.prev(input).shift().dispatchEvent(new MouseEvent('mousedown', { clientX: 100 }));
+                        window.dispatchEvent(new MouseEvent('mousemove', { clientX: 180 }));
+                    });
+                    const outer = page.locator('.switch-outer');
+                    await expect(outer).toHaveClass(/\bswitch-dragging\b/);
+
+                    await page.evaluate((target) => $.setProperty(target, 'disabled', true), target);
+                    await expect(outer).toHaveAttribute('aria-disabled', 'true');
+                    await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
+                    await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
+
+                    await page.evaluate(() => {
+                        window.dispatchEvent(new MouseEvent('mousemove', { clientX: 200 }));
+                        window.dispatchEvent(new MouseEvent('mouseup'));
+                    });
+                    await expect(page.locator('#switch')).not.toBeChecked();
+                    await expect(outer).toHaveAttribute('aria-checked', 'false');
+                    expect(await page.evaluate(() => window.disabledChanges)).toBe(0);
+
+                    await page.evaluate((target) => $.setProperty(target, 'disabled', false), target);
+                    await page.clock.runFor(501);
+                    await outer.click();
+                    await expect(page.locator('#switch')).toBeChecked();
+                    expect(await page.evaluate(() => window.disabledChanges)).toBe(1);
+                });
+            }
         });
 
         test('renders an unlabelled input without an invalid label reference', async ({ page }) => {

@@ -3,6 +3,12 @@ import $ from "@fr0st/query";
 
 //#region src/js/switch.js
 var window = $.getWindow();
+var ariaAttributes = [
+	"aria-describedby",
+	"aria-errormessage",
+	"aria-invalid",
+	"aria-required"
+];
 /**
 * @typedef {object} SwitchOptions
 * @property {boolean} [animate=true] Whether to transition state changes.
@@ -55,6 +61,7 @@ var Switch = class Switch extends BaseComponent {
 	#form;
 	#generatedLabelIds = /* @__PURE__ */ new Map();
 	#hidden;
+	#observer;
 	#offToggle;
 	#onToggle;
 	#outerContainer;
@@ -85,7 +92,7 @@ var Switch = class Switch extends BaseComponent {
 			const focused = $.is(this.node, ":focus");
 			this.#render();
 			this.#refresh();
-			this.#refreshDisabled();
+			this.#refreshState();
 			this.#events();
 			if (focused) $.focus(this.#outerContainer);
 		} catch (error) {
@@ -98,8 +105,7 @@ var Switch = class Switch extends BaseComponent {
 	*/
 	disable() {
 		$.setAttribute(this.node, { disabled: true });
-		if (this.#dragActive) this.#resetState();
-		this.#refreshDisabled();
+		this.#refreshState();
 	}
 	/** @inheritdoc */
 	dispose() {
@@ -108,6 +114,7 @@ var Switch = class Switch extends BaseComponent {
 		this.#clearClickSuppression();
 		this.#pendingResets.clear();
 		this.#resizeObserver?.disconnect();
+		this.#observer?.disconnect();
 		for (const [label, id] of this.#generatedLabelIds || []) if ($.getAttribute(label, "id") === id) $.removeAttribute(label, "id");
 		$.remove(this.#outerContainer);
 		$.removeEvent(this.node, "focus.ui.switch");
@@ -123,6 +130,7 @@ var Switch = class Switch extends BaseComponent {
 		this.#divider = null;
 		this.#form = null;
 		this.#generatedLabelIds = null;
+		this.#observer = null;
 		this.#offToggle = null;
 		this.#onToggle = null;
 		this.#outerContainer = null;
@@ -135,7 +143,7 @@ var Switch = class Switch extends BaseComponent {
 	*/
 	enable() {
 		$.removeAttribute(this.node, "disabled");
-		this.#refreshDisabled();
+		this.#refreshState();
 	}
 	/**
 	* Gets the current checkbox state. Animated state changes are committed when the transition finishes.
@@ -240,6 +248,22 @@ var Switch = class Switch extends BaseComponent {
 		$.addEvent(this.node, "change.ui.switch", (event) => {
 			if (event.skipUpdate || this.#sliding) return;
 			this.#animateState(this.getState());
+		});
+		this.#observer = new window.MutationObserver(() => {
+			if (!this.node) return;
+			this.#refreshState();
+		});
+		this.#observer.observe(this.node, {
+			attributes: true,
+			attributeFilter: [
+				"disabled",
+				"required",
+				...ariaAttributes
+			]
+		});
+		for (const fieldset of $.parents(this.node, "fieldset")) this.#observer.observe(fieldset, {
+			attributes: true,
+			attributeFilter: ["disabled"]
 		});
 		$.addEvent(this.#outerContainer, "keydown.ui.switch", (event) => {
 			if (!["Enter", "Space"].includes(event.code) || $.is(this.node, ":disabled")) return;
@@ -346,16 +370,24 @@ var Switch = class Switch extends BaseComponent {
 		this.#resizeObserver = null;
 	}
 	/**
-	* Synchronizes disabled styling and focusability with the checkbox.
+	* Synchronizes disabled styling, focusability, and inherited accessibility attributes.
 	*/
-	#refreshDisabled() {
+	#refreshState() {
 		const disabled = $.is(this.node, ":disabled");
-		if (disabled) $.addClass(this.#outerContainer, this.constructor.classes.disabled);
-		else $.removeClass(this.#outerContainer, this.constructor.classes.disabled);
+		if (disabled) {
+			if (this.#dragActive) this.#resetState();
+			$.addClass(this.#outerContainer, this.constructor.classes.disabled);
+		} else $.removeClass(this.#outerContainer, this.constructor.classes.disabled);
 		$.setAttribute(this.#outerContainer, {
 			"aria-disabled": disabled,
 			"tabindex": disabled ? -1 : 0
 		});
+		for (const attribute of ariaAttributes) {
+			let value = $.getAttribute(this.node, attribute);
+			if (attribute === "aria-required" && value === null) value = Boolean($.getProperty(this.node, "required"));
+			if (value === null) $.removeAttribute(this.#outerContainer, attribute);
+			else $.setAttribute(this.#outerContainer, { [attribute]: value });
+		}
 	}
 	/**
 	* Renders the Switch and records input and label attributes for disposal.
@@ -375,8 +407,7 @@ var Switch = class Switch extends BaseComponent {
 		}
 		const attributes = {
 			"role": "switch",
-			"aria-checked": this.getState(),
-			"aria-required": Boolean($.getProperty(this.node, "required"))
+			"aria-checked": this.getState()
 		};
 		const direction = $.getAttribute(this.node, "dir");
 		const ariaLabel = $.getAttribute(this.node, "aria-label");

@@ -35,6 +35,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 
 //#region src/js/switch.js
 	var window = _fr0st_query.default.getWindow();
+	var ariaAttributes = [
+		"aria-describedby",
+		"aria-errormessage",
+		"aria-invalid",
+		"aria-required"
+	];
 	/**
 	* @typedef {object} SwitchOptions
 	* @property {boolean} [animate=true] Whether to transition state changes.
@@ -87,6 +93,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#form;
 		#generatedLabelIds = /* @__PURE__ */ new Map();
 		#hidden;
+		#observer;
 		#offToggle;
 		#onToggle;
 		#outerContainer;
@@ -117,7 +124,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				const focused = _fr0st_query.default.is(this.node, ":focus");
 				this.#render();
 				this.#refresh();
-				this.#refreshDisabled();
+				this.#refreshState();
 				this.#events();
 				if (focused) _fr0st_query.default.focus(this.#outerContainer);
 			} catch (error) {
@@ -130,8 +137,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		disable() {
 			_fr0st_query.default.setAttribute(this.node, { disabled: true });
-			if (this.#dragActive) this.#resetState();
-			this.#refreshDisabled();
+			this.#refreshState();
 		}
 		/** @inheritdoc */
 		dispose() {
@@ -140,6 +146,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#clearClickSuppression();
 			this.#pendingResets.clear();
 			this.#resizeObserver?.disconnect();
+			this.#observer?.disconnect();
 			for (const [label, id] of this.#generatedLabelIds || []) if (_fr0st_query.default.getAttribute(label, "id") === id) _fr0st_query.default.removeAttribute(label, "id");
 			_fr0st_query.default.remove(this.#outerContainer);
 			_fr0st_query.default.removeEvent(this.node, "focus.ui.switch");
@@ -155,6 +162,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#divider = null;
 			this.#form = null;
 			this.#generatedLabelIds = null;
+			this.#observer = null;
 			this.#offToggle = null;
 			this.#onToggle = null;
 			this.#outerContainer = null;
@@ -167,7 +175,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		*/
 		enable() {
 			_fr0st_query.default.removeAttribute(this.node, "disabled");
-			this.#refreshDisabled();
+			this.#refreshState();
 		}
 		/**
 		* Gets the current checkbox state. Animated state changes are committed when the transition finishes.
@@ -272,6 +280,22 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			_fr0st_query.default.addEvent(this.node, "change.ui.switch", (event) => {
 				if (event.skipUpdate || this.#sliding) return;
 				this.#animateState(this.getState());
+			});
+			this.#observer = new window.MutationObserver(() => {
+				if (!this.node) return;
+				this.#refreshState();
+			});
+			this.#observer.observe(this.node, {
+				attributes: true,
+				attributeFilter: [
+					"disabled",
+					"required",
+					...ariaAttributes
+				]
+			});
+			for (const fieldset of _fr0st_query.default.parents(this.node, "fieldset")) this.#observer.observe(fieldset, {
+				attributes: true,
+				attributeFilter: ["disabled"]
 			});
 			_fr0st_query.default.addEvent(this.#outerContainer, "keydown.ui.switch", (event) => {
 				if (!["Enter", "Space"].includes(event.code) || _fr0st_query.default.is(this.node, ":disabled")) return;
@@ -378,16 +402,24 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#resizeObserver = null;
 		}
 		/**
-		* Synchronizes disabled styling and focusability with the checkbox.
+		* Synchronizes disabled styling, focusability, and inherited accessibility attributes.
 		*/
-		#refreshDisabled() {
+		#refreshState() {
 			const disabled = _fr0st_query.default.is(this.node, ":disabled");
-			if (disabled) _fr0st_query.default.addClass(this.#outerContainer, this.constructor.classes.disabled);
-			else _fr0st_query.default.removeClass(this.#outerContainer, this.constructor.classes.disabled);
+			if (disabled) {
+				if (this.#dragActive) this.#resetState();
+				_fr0st_query.default.addClass(this.#outerContainer, this.constructor.classes.disabled);
+			} else _fr0st_query.default.removeClass(this.#outerContainer, this.constructor.classes.disabled);
 			_fr0st_query.default.setAttribute(this.#outerContainer, {
 				"aria-disabled": disabled,
 				"tabindex": disabled ? -1 : 0
 			});
+			for (const attribute of ariaAttributes) {
+				let value = _fr0st_query.default.getAttribute(this.node, attribute);
+				if (attribute === "aria-required" && value === null) value = Boolean(_fr0st_query.default.getProperty(this.node, "required"));
+				if (value === null) _fr0st_query.default.removeAttribute(this.#outerContainer, attribute);
+				else _fr0st_query.default.setAttribute(this.#outerContainer, { [attribute]: value });
+			}
 		}
 		/**
 		* Renders the Switch and records input and label attributes for disposal.
@@ -407,8 +439,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			}
 			const attributes = {
 				"role": "switch",
-				"aria-checked": this.getState(),
-				"aria-required": Boolean(_fr0st_query.default.getProperty(this.node, "required"))
+				"aria-checked": this.getState()
 			};
 			const direction = _fr0st_query.default.getAttribute(this.node, "dir");
 			const ariaLabel = _fr0st_query.default.getAttribute(this.node, "aria-label");

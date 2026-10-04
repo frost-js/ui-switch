@@ -317,6 +317,8 @@ Pass an options object to initialize every matched element, or pass a public met
 - The rendered control enters the tab order while the original checkbox becomes visually hidden and receives `aria-hidden="true"` and `tabindex="-1"` to expose a single accessible control.
 - Space and Enter toggle the focused switch. Repeated keydown events are ignored.
 - Disabled switches leave the tab order and ignore keyboard, click, mouse, and touch interaction.
+- Changes to the checkbox's `disabled` and `required` attributes, and to ancestor fieldsets' `disabled` attributes, automatically update the rendered control. Becoming disabled cancels an active drag without changing the checkbox state.
+- The rendered control inherits `aria-describedby`, `aria-errormessage`, `aria-invalid`, and `aria-required`, including later updates and removals. Without an explicit `aria-required`, it reflects the checkbox's native `required` state.
 - The original checkbox remains the submitted form field and preserves native `checked`, `required`, and `disabled` behavior.
 
 Applications remain responsible for a meaningful visible label, instructions, validation feedback, and sufficient contrast when replacing the default semantic classes.
