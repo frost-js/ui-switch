@@ -282,10 +282,14 @@ var Switch = class Switch extends BaseComponent {
 			const maxX = this.#rtl ? this.#toggleWidth : 0;
 			this.#currentX = $._clamp(x - dragOffsetX, minX, maxX);
 			$.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
-		}, () => {
+		}, (event) => {
 			const dragActive = this.#dragActive;
 			this.#dragActive = false;
 			if (!this.node) return;
+			if (event.type === "touchcancel") {
+				if (dragActive) this.#resetState();
+				return;
+			}
 			if (!dragActive) {
 				this.#suppressNextClick();
 				return;

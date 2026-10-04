@@ -925,6 +925,127 @@ test.describe('Switch', () => {
                 await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
             });
 
+            test.describe('touch cancellation', () => {
+                test.use({ mockClock: true });
+
+                for (const direction of ['ltr', 'rtl']) {
+                    for (const checked of [false, true]) {
+                        for (const distance of [1, 80]) {
+                            const stage = distance === 1 ? 'before' : 'after';
+
+                            test(`restores ${checked ? 'checked' : 'unchecked'} ${direction} state ${stage} the drag threshold`, async ({ page }) => {
+                                await page.evaluate(({ direction, checked, distance }) => {
+                                    const input = $.findOne('#switch');
+                                    $.setProperty(input, { checked });
+                                    $.setAttribute(input, { dir: direction });
+                                    UI.Switch.init(input, { animate: false, labelWidth: 80 });
+                                    const outer = $.prev(input).shift();
+                                    window.touchCancelChanges = 0;
+                                    $.addEvent(input, 'change.ui.switch', () => window.touchCancelChanges++);
+
+                                    const dispatchTouch = (target, type, touches) => {
+                                        const event = new Event(type, { bubbles: true });
+                                        Object.defineProperty(event, 'touches', { value: touches });
+                                        target.dispatchEvent(event);
+                                    };
+                                    const sign = (checked ? -1 : 1) * (direction === 'rtl' ? -1 : 1);
+                                    const touches = [{ pageX: 100 + distance * sign, pageY: 20 }];
+                                    dispatchTouch(outer, 'touchstart', [{ pageX: 100, pageY: 20 }]);
+                                    dispatchTouch(window, 'touchmove', touches);
+                                }, { direction, checked, distance });
+
+                                const outer = page.locator('.switch-outer');
+                                if (distance === 1) {
+                                    await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
+                                } else {
+                                    await expect(outer).toHaveClass(/\bswitch-dragging\b/);
+                                }
+
+                                await page.evaluate(() => window.dispatchEvent(new Event('touchcancel')));
+                                await page.clock.runFor(1);
+
+                                const uncheckedX = direction === 'rtl' ? 80 : -80;
+                                const x = checked ? 0 : uncheckedX;
+                                await expect(page.locator('#switch')).toHaveJSProperty('checked', checked);
+                                await expect(outer).toHaveAttribute('aria-checked', `${checked}`);
+                                await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
+                                await expect(outer.locator('.switch')).toHaveCSS('transform', `matrix(1, 0, 0, 1, ${x}, 0)`);
+                                expect(await page.evaluate(() => window.touchCancelChanges)).toBe(0);
+
+                                await page.evaluate(({ direction, checked }) => {
+                                    const sign = (checked ? -1 : 1) * (direction === 'rtl' ? -1 : 1);
+                                    const move = new Event('touchmove');
+                                    Object.defineProperty(move, 'touches', {
+                                        value: [{ pageX: 100 + 80 * sign, pageY: 20 }],
+                                    });
+                                    window.dispatchEvent(move);
+                                    const end = new Event('touchend');
+                                    Object.defineProperty(end, 'touches', { value: [] });
+                                    window.dispatchEvent(end);
+                                }, { direction, checked });
+
+                                await expect(page.locator('#switch')).toHaveJSProperty('checked', checked);
+                                expect(await page.evaluate(() => window.touchCancelChanges)).toBe(0);
+
+                                await outer.click();
+                                await expect(page.locator('#switch')).toHaveJSProperty('checked', !checked);
+                                await expect(outer).toHaveAttribute('aria-checked', `${!checked}`);
+                                expect(await page.evaluate(() => window.touchCancelChanges)).toBe(1);
+                            });
+                        }
+                    }
+                }
+
+                test('restores committed state after interrupting a transition before dragging', async ({ page }) => {
+                    await page.evaluate(() => {
+                        const input = $.findOne('#switch');
+                        const component = UI.Switch.init(input, { duration: 5000, labelWidth: 80 });
+                        window.touchCancelChanges = 0;
+                        $.addEvent(input, 'change.ui.switch', () => window.touchCancelChanges++);
+                        component.setState(true);
+
+                        const start = new Event('touchstart', { bubbles: true });
+                        Object.defineProperty(start, 'touches', { value: [{ pageX: 100, pageY: 20 }] });
+                        $.prev(input).shift().dispatchEvent(start);
+                        window.dispatchEvent(new Event('touchcancel'));
+                    });
+                    await page.clock.runFor(5100);
+
+                    await expect(page.locator('#switch')).not.toBeChecked();
+                    const outer = page.locator('.switch-outer');
+                    await expect(outer).toHaveAttribute('aria-checked', 'false');
+                    await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
+                    expect(await page.evaluate(() => window.touchCancelChanges)).toBe(0);
+
+                    await outer.click();
+                    await page.clock.runFor(5100);
+                    await expect(page.locator('#switch')).toBeChecked();
+                    expect(await page.evaluate(() => window.touchCancelChanges)).toBe(1);
+                });
+
+                test('preserves a state change started after the drag was reset', async ({ page }) => {
+                    await page.evaluate(() => {
+                        const input = $.findOne('#switch');
+                        const component = UI.Switch.init(input, { duration: 100, labelWidth: 80 });
+                        window.touchCancelChanges = 0;
+                        $.addEvent(input, 'change.ui.switch', () => window.touchCancelChanges++);
+
+                        const start = new Event('touchstart', { bubbles: true });
+                        Object.defineProperty(start, 'touches', { value: [{ pageX: 100, pageY: 20 }] });
+                        $.prev(input).shift().dispatchEvent(start);
+                        component.disable();
+                        component.enable();
+                        component.setState(true);
+                        window.dispatchEvent(new Event('touchcancel'));
+                    });
+                    await page.clock.runFor(200);
+
+                    await expect(page.locator('#switch')).toBeChecked();
+                    await expect(page.locator('.switch-outer')).toHaveAttribute('aria-checked', 'true');
+                    expect(await page.evaluate(() => window.touchCancelChanges)).toBe(1);
+                });
+            });
+
             for (const { name, start } of [
                 {
                     name: 'non-primary button',

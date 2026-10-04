@@ -314,10 +314,14 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				const maxX = this.#rtl ? this.#toggleWidth : 0;
 				this.#currentX = _fr0st_query.default._clamp(x - dragOffsetX, minX, maxX);
 				_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
-			}, () => {
+			}, (event) => {
 				const dragActive = this.#dragActive;
 				this.#dragActive = false;
 				if (!this.node) return;
+				if (event.type === "touchcancel") {
+					if (dragActive) this.#resetState();
+					return;
+				}
 				if (!dragActive) {
 					this.#suppressNextClick();
 					return;

@@ -439,11 +439,19 @@ export default class Switch extends BaseComponent {
 
                 $.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
             },
-            () => {
+            (event) => {
                 const dragActive = this.#dragActive;
                 this.#dragActive = false;
 
                 if (!this.node) {
+                    return;
+                }
+
+                if (event.type === 'touchcancel') {
+                    if (dragActive) {
+                        this.#resetState();
+                    }
+
                     return;
                 }
 
