@@ -107,7 +107,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		constructor(node, options) {
 			super(node, options);
 			try {
-				this.#form = this.node.form;
+				this.#form = _fr0st_query.default.getProperty(this.node, "form");
 				this.#hidden = _fr0st_query.default.hasClass(this.node, this.constructor.classes.hide);
 				this.#tabIndex = _fr0st_query.default.getAttribute(this.node, "tabindex");
 				this.#ariaHidden = _fr0st_query.default.getAttribute(this.node, "aria-hidden");
@@ -390,7 +390,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			const labelledBy = /* @__PURE__ */ new Set();
 			const inputLabelledBy = _fr0st_query.default.getAttribute(this.node, "aria-labelledby");
 			if (inputLabelledBy) for (const id of inputLabelledBy.split(/\s+/)) labelledBy.add(id);
-			for (const label of this.node.labels || []) {
+			for (const label of _fr0st_query.default.getProperty(this.node, "labels") || []) {
 				let id = _fr0st_query.default.getAttribute(label, "id");
 				if (!id) {
 					id = (0, _fr0st_ui.generateId)("switch-label");

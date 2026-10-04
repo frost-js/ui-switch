@@ -61,7 +61,7 @@ test.describe('Switch hidden initialization', () => {
         await page.evaluate(() => {
             const input = $.findOne('#switch');
             UI.Switch.init(input, { duration: 100 }).setState(true);
-            input.previousElementSibling.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
+            $.prev(input).shift().dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
             window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500 }));
             window.dispatchEvent(new MouseEvent('mouseup'));
         });
@@ -95,13 +95,13 @@ test.describe('Switch hidden initialization', () => {
                 expect(await page.evaluate(() => window.switchObservers.size)).toBe(0);
 
                 const layouts = await page.evaluate(() => ['switch', 'reference'].map((id) => {
-                    const outer = $.findOneById(id).previousElementSibling;
+                    const outer = $.prev($.findOneById(id)).shift();
                     const track = $.findOne('.switch', outer);
                     return {
-                        width: outer.getBoundingClientRect().width,
-                        onWidth: $.findOne('.switch-toggle-on', outer).getBoundingClientRect().width,
-                        offWidth: $.findOne('.switch-toggle-off', outer).getBoundingClientRect().width,
-                        dividerWidth: $.findOne('.switch-toggle-divider', outer).getBoundingClientRect().width,
+                        width: $.rect(outer).width,
+                        onWidth: $.rect($.findOne('.switch-toggle-on', outer)).width,
+                        offWidth: $.rect($.findOne('.switch-toggle-off', outer)).width,
+                        dividerWidth: $.rect($.findOne('.switch-toggle-divider', outer)).width,
                         transform: getComputedStyle(track).transform,
                         checked: $.getAttribute(outer, 'aria-checked'),
                     };

@@ -276,7 +276,7 @@ test.describe('Switch', () => {
                     duration: 100,
                     labelWidth: 80,
                 });
-                const outer = input.previousElementSibling;
+                const outer = $.prev(input).shift();
                 component.setState(true);
 
                 const event = new Event('touchstart', {
@@ -328,7 +328,7 @@ test.describe('Switch', () => {
                     const input = $.findOne('#switch');
                     $.setProperty(input, 'checked', checked);
                     const component = UI.Switch.init(input, { animate: false, labelWidth: 80 });
-                    const outer = input.previousElementSibling;
+                    const outer = $.prev(input).shift();
 
                     window.disableChanges = 0;
                     $.addEvent(input, 'change.ui.switch', () => window.disableChanges++);
@@ -684,7 +684,7 @@ test.describe('Switch', () => {
                         if (disabled) {
                             component.disable();
                         }
-                        input.previousElementSibling.dispatchEvent(new MouseEvent('click', {
+                        $.prev(input).shift().dispatchEvent(new MouseEvent('click', {
                             bubbles: true,
                             button,
                             cancelable: true,
@@ -788,7 +788,7 @@ test.describe('Switch', () => {
                         animate: false,
                         labelWidth: 80,
                     });
-                    const outer = input.previousElementSibling;
+                    const outer = $.prev(input).shift();
                     outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
                     window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500 }));
                     window.dispatchEvent(new MouseEvent('mouseup'));
@@ -842,7 +842,7 @@ test.describe('Switch', () => {
                         animate: false,
                         labelWidth: 80,
                     });
-                    const outer = input.previousElementSibling;
+                    const outer = $.prev(input).shift();
                     outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
                     window.dispatchEvent(new MouseEvent('mousemove', { clientX: 401 }));
                     window.dispatchEvent(new MouseEvent('mouseup'));
@@ -858,8 +858,8 @@ test.describe('Switch', () => {
                         animate: false,
                         labelWidth: 80,
                     });
-                    const outer = input.previousElementSibling;
-                    const rect = outer.getBoundingClientRect();
+                    const outer = $.prev(input).shift();
+                    const rect = $.rect(outer);
                     const y = rect.top + (rect.height / 2);
                     const dispatchTouch = (target, type, x, active) => {
                         const event = new Event(type, {
@@ -911,7 +911,7 @@ test.describe('Switch', () => {
                     const outer = await page.evaluateHandle(() => {
                         const input = $.findOne('#switch');
                         UI.Switch.init(input, { animate: false, labelWidth: 80 });
-                        return input.previousElementSibling;
+                        return $.prev(input).shift();
                     });
                     await page.evaluate(start, outer);
                     await page.evaluate(() => {
@@ -932,7 +932,7 @@ test.describe('Switch', () => {
                 await page.evaluate(() => {
                     const input = $.findOne('#switch');
                     UI.Switch.init(input, { animate: false, labelWidth: 80 });
-                    input.previousElementSibling.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
+                    $.prev(input).shift().dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
                     window.dispatchEvent(new Event('mousemove'));
                 });
 
@@ -1012,7 +1012,7 @@ test.describe('Switch', () => {
             await track.evaluate(() => new Promise(requestAnimationFrame));
             await page.evaluate(() => {
                 const input = $.findOne('#switch');
-                const transition = input.previousElementSibling.firstElementChild
+                const transition = $.child($.prev(input).shift()).shift()
                     .getAnimations()
                     .find((animation) => animation instanceof window.CSSTransition);
 
@@ -1098,7 +1098,7 @@ test.describe('Switch', () => {
                     duration: 200,
                     labelWidth: 80,
                 });
-                return input.previousElementSibling.firstElementChild
+                return $.child($.prev(input).shift()).shift()
                     .getAnimations()
                     .length;
             })).toBe(0);
@@ -1140,7 +1140,7 @@ test.describe('Switch', () => {
                     duration: 1200,
                     labelWidth: 80,
                 });
-                const outer = input.previousElementSibling;
+                const outer = $.prev(input).shift();
                 outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
                 window.dispatchEvent(new MouseEvent('mousemove', { clientX: 460 }));
             });

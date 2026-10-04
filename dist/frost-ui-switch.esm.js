@@ -75,7 +75,7 @@ var Switch = class Switch extends BaseComponent {
 	constructor(node, options) {
 		super(node, options);
 		try {
-			this.#form = this.node.form;
+			this.#form = $.getProperty(this.node, "form");
 			this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
 			this.#tabIndex = $.getAttribute(this.node, "tabindex");
 			this.#ariaHidden = $.getAttribute(this.node, "aria-hidden");
@@ -358,7 +358,7 @@ var Switch = class Switch extends BaseComponent {
 		const labelledBy = /* @__PURE__ */ new Set();
 		const inputLabelledBy = $.getAttribute(this.node, "aria-labelledby");
 		if (inputLabelledBy) for (const id of inputLabelledBy.split(/\s+/)) labelledBy.add(id);
-		for (const label of this.node.labels || []) {
+		for (const label of $.getProperty(this.node, "labels") || []) {
 			let id = $.getAttribute(label, "id");
 			if (!id) {
 				id = generateId("switch-label");

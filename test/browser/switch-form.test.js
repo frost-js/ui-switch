@@ -154,7 +154,7 @@ test.describe('Switch form resets', () => {
     test('ignores the remaining drag events after resetting mid-drag', async ({ page }) => {
         await page.evaluate(() => {
             const input = $.findOne('#switch');
-            input.previousElementSibling.dispatchEvent(new MouseEvent('mousedown', { clientX: 100 }));
+            $.prev(input).shift().dispatchEvent(new MouseEvent('mousedown', { clientX: 100 }));
             window.dispatchEvent(new MouseEvent('mousemove', { clientX: 160 }));
             input.form.reset();
         });
@@ -176,7 +176,7 @@ test.describe('Switch form resets', () => {
     test('clears drag click suppression on reset', async ({ page }) => {
         await page.evaluate(() => {
             const input = $.findOne('#switch');
-            input.previousElementSibling.dispatchEvent(new MouseEvent('mousedown', { clientX: 100 }));
+            $.prev(input).shift().dispatchEvent(new MouseEvent('mousedown', { clientX: 100 }));
             window.dispatchEvent(new MouseEvent('mousemove', { clientX: 180 }));
             window.dispatchEvent(new MouseEvent('mouseup'));
             input.form.reset();

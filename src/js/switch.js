@@ -80,7 +80,7 @@ export default class Switch extends BaseComponent {
         super(node, options);
 
         try {
-            this.#form = this.node.form;
+            this.#form = $.getProperty(this.node, 'form');
 
             this.#hidden = $.hasClass(this.node, this.constructor.classes.hide);
             this.#tabIndex = $.getAttribute(this.node, 'tabindex');
@@ -567,7 +567,7 @@ export default class Switch extends BaseComponent {
             }
         }
 
-        for (const label of this.node.labels || []) {
+        for (const label of $.getProperty(this.node, 'labels') || []) {
             let id = $.getAttribute(label, 'id');
 
             if (!id) {
