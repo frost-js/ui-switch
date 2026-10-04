@@ -75,8 +75,13 @@ export default class Switch extends BaseComponent {
      * Creates a Switch.
      * @param {HTMLInputElement} node The checkbox input node.
      * @param {SwitchOptions} [options] The Switch options.
+     * @throws {TypeError} When the node is not a checkbox input element.
      */
     constructor(node, options) {
+        if (!$.is(node, 'input[type="checkbox"]')) {
+            throw new TypeError('Switch must be created on a checkbox input element.');
+        }
+
         super(node, options);
 
         try {

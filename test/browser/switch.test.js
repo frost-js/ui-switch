@@ -25,6 +25,41 @@ test.describe('Switch', () => {
             });
         }
 
+        for (const { tag, type } of [
+            { tag: 'div' },
+            { tag: 'select' },
+            { tag: 'textarea' },
+            { tag: 'input' },
+            { tag: 'input', type: 'text' },
+            { tag: 'input', type: 'radio' },
+            { tag: 'input', type: 'number' },
+        ]) {
+            for (const { name, init } of [
+                { name: 'constructor', init: () => new UI.Switch($.findOne('#invalid')) },
+                { name: 'class', init: () => UI.Switch.init($.findOne('#invalid')) },
+                { name: 'QuerySet', init: () => $('#invalid').switch() },
+            ]) {
+                const description = type ? `${type} inputs` : `${tag} elements`;
+
+                test(`rejects ${description} without side effects (${name})`, async ({ page }) => {
+                    const markup = await page.evaluate(({ tag, type }) => {
+                        const typeAttribute = type ? ` type="${type}"` : '';
+                        $.setHtml(document.body,
+                            `<${tag} id="invalid" class="existing" tabindex="7"${typeAttribute}></${tag}>`,
+                        );
+                        return $.getHtml(document.body);
+                    }, { tag, type });
+
+                    await expect(page.evaluate(init)).rejects.toThrow(
+                        'Switch must be created on a checkbox input element.',
+                    );
+
+                    expect(await page.evaluate(() => $.hasData('#invalid', 'switch'))).toBe(false);
+                    expect(await page.evaluate(() => $.getHtml(document.body))).toBe(markup);
+                });
+            }
+        }
+
         test('creates multiple Switches (QuerySet)', async ({ page }) => {
             expect(await page.evaluate(() => {
                 $('input').switch();

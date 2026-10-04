@@ -103,8 +103,10 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Creates a Switch.
 		* @param {HTMLInputElement} node The checkbox input node.
 		* @param {SwitchOptions} [options] The Switch options.
+		* @throws {TypeError} When the node is not a checkbox input element.
 		*/
 		constructor(node, options) {
+			if (!_fr0st_query.default.is(node, "input[type=\"checkbox\"]")) throw new TypeError("Switch must be created on a checkbox input element.");
 			super(node, options);
 			try {
 				this.#form = _fr0st_query.default.getProperty(this.node, "form");
