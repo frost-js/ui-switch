@@ -282,7 +282,7 @@ var Switch = class Switch extends BaseComponent {
 		});
 		let dragStartX = 0;
 		let dragOffsetX = 0;
-		const dragEvent = $.mouseDragFactory((event) => {
+		const downEvent = (event) => {
 			if (!this.node || event.type === "mousedown" && event.button !== 0 || $.is(this.node, ":disabled")) return false;
 			const { x } = getPosition(event);
 			if (!Number.isFinite(x)) return false;
@@ -292,7 +292,8 @@ var Switch = class Switch extends BaseComponent {
 			dragStartX = x;
 			dragOffsetX = x - this.#currentX;
 			$.focus(this.#outerContainer);
-		}, (event) => {
+		};
+		const moveEvent = (event) => {
 			if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
 			const { x } = getPosition(event);
 			if (!Number.isFinite(x)) return;
@@ -306,7 +307,8 @@ var Switch = class Switch extends BaseComponent {
 			const maxX = this.#rtl ? this.#toggleWidth : 0;
 			this.#currentX = $._clamp(x - dragOffsetX, minX, maxX);
 			$.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
-		}, (event) => {
+		};
+		const upEvent = (event) => {
 			const dragActive = this.#dragActive;
 			this.#dragActive = false;
 			if (!this.node) return;
@@ -323,7 +325,8 @@ var Switch = class Switch extends BaseComponent {
 			this.#suppressNextClick();
 			$.removeClass(this.#outerContainer, this.constructor.classes.dragging);
 			this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
-		}, {
+		};
+		const dragEvent = $.mouseDragFactory(downEvent, moveEvent, upEvent, {
 			debounce: false,
 			passive: false,
 			preventDefault: false

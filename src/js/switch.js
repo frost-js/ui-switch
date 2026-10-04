@@ -403,103 +403,104 @@ export default class Switch extends BaseComponent {
         let dragStartX = 0;
         let dragOffsetX = 0;
 
-        const dragEvent = $.mouseDragFactory(
-            (event) => {
-                if (
-                    !this.node ||
-                    (event.type === 'mousedown' && event.button !== 0) ||
-                    $.is(this.node, ':disabled')
-                ) {
-                    return false;
+        const downEvent = (event) => {
+            if (
+                !this.node ||
+                (event.type === 'mousedown' && event.button !== 0) ||
+                $.is(this.node, ':disabled')
+            ) {
+                return false;
+            }
+
+            const { x } = getPosition(event);
+
+            if (!Number.isFinite(x)) {
+                return false;
+            }
+
+            this.#cancelAnimation();
+
+            this.#dragActive = true;
+            this.#sliding = false;
+            dragStartX = x;
+            dragOffsetX = x - this.#currentX;
+
+            $.focus(this.#outerContainer);
+        };
+
+        const moveEvent = (event) => {
+            if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) {
+                return;
+            }
+
+            const { x } = getPosition(event);
+
+            if (!Number.isFinite(x)) {
+                return;
+            }
+
+            if (
+                !this.#sliding &&
+                Math.abs(x - dragStartX) < Switch.#DRAG_THRESHOLD
+            ) {
+                return;
+            }
+
+            if (!this.#sliding) {
+                this.#sliding = true;
+                $.addClass(this.#outerContainer, this.constructor.classes.dragging);
+            }
+
+            if (event.cancelable) {
+                event.preventDefault();
+            }
+
+            const minX = this.#rtl ? 0 : -this.#toggleWidth;
+            const maxX = this.#rtl ? this.#toggleWidth : 0;
+
+            this.#currentX = $._clamp(x - dragOffsetX, minX, maxX);
+
+            $.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
+        };
+
+        const upEvent = (event) => {
+            const dragActive = this.#dragActive;
+            this.#dragActive = false;
+
+            if (!this.node) {
+                return;
+            }
+
+            if (event.type === 'touchcancel') {
+                if (dragActive) {
+                    this.#resetState();
                 }
 
-                const { x } = getPosition(event);
+                return;
+            }
 
-                if (!Number.isFinite(x)) {
-                    return false;
-                }
-
-                this.#cancelAnimation();
-
-                this.#dragActive = true;
-                this.#sliding = false;
-                dragStartX = x;
-                dragOffsetX = x - this.#currentX;
-
-                $.focus(this.#outerContainer);
-            },
-            (event) => {
-                if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) {
-                    return;
-                }
-
-                const { x } = getPosition(event);
-
-                if (!Number.isFinite(x)) {
-                    return;
-                }
-
-                if (
-                    !this.#sliding &&
-                    Math.abs(x - dragStartX) < Switch.#DRAG_THRESHOLD
-                ) {
-                    return;
-                }
-
-                if (!this.#sliding) {
-                    this.#sliding = true;
-                    $.addClass(this.#outerContainer, this.constructor.classes.dragging);
-                }
-
-                if (event.cancelable) {
-                    event.preventDefault();
-                }
-
-                const minX = this.#rtl ? 0 : -this.#toggleWidth;
-                const maxX = this.#rtl ? this.#toggleWidth : 0;
-
-                this.#currentX = $._clamp(x - dragOffsetX, minX, maxX);
-
-                $.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
-            },
-            (event) => {
-                const dragActive = this.#dragActive;
-                this.#dragActive = false;
-
-                if (!this.node) {
-                    return;
-                }
-
-                if (event.type === 'touchcancel') {
-                    if (dragActive) {
-                        this.#resetState();
-                    }
-
-                    return;
-                }
-
-                if (!dragActive) {
-                    this.#suppressNextClick();
-                    return;
-                }
-
-                if (!this.#sliding) {
-                    return;
-                }
-
-                this.#sliding = false;
+            if (!dragActive) {
                 this.#suppressNextClick();
+                return;
+            }
 
-                $.removeClass(this.#outerContainer, this.constructor.classes.dragging);
+            if (!this.#sliding) {
+                return;
+            }
 
-                this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
-            },
-            {
-                debounce: false,
-                passive: false,
-                preventDefault: false,
-            },
-        );
+            this.#sliding = false;
+            this.#suppressNextClick();
+
+            $.removeClass(this.#outerContainer, this.constructor.classes.dragging);
+
+            this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
+        };
+
+        const dragEvent = $.mouseDragFactory(downEvent, moveEvent, upEvent, {
+            debounce: false,
+            passive: false,
+            preventDefault: false,
+        });
 
         $.addEvent(
             this.#outerContainer,

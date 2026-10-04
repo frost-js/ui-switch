@@ -314,7 +314,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			});
 			let dragStartX = 0;
 			let dragOffsetX = 0;
-			const dragEvent = _fr0st_query.default.mouseDragFactory((event) => {
+			const downEvent = (event) => {
 				if (!this.node || event.type === "mousedown" && event.button !== 0 || _fr0st_query.default.is(this.node, ":disabled")) return false;
 				const { x } = (0, _fr0st_ui.getPosition)(event);
 				if (!Number.isFinite(x)) return false;
@@ -324,7 +324,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				dragStartX = x;
 				dragOffsetX = x - this.#currentX;
 				_fr0st_query.default.focus(this.#outerContainer);
-			}, (event) => {
+			};
+			const moveEvent = (event) => {
 				if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
 				const { x } = (0, _fr0st_ui.getPosition)(event);
 				if (!Number.isFinite(x)) return;
@@ -338,7 +339,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				const maxX = this.#rtl ? this.#toggleWidth : 0;
 				this.#currentX = _fr0st_query.default._clamp(x - dragOffsetX, minX, maxX);
 				_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
-			}, (event) => {
+			};
+			const upEvent = (event) => {
 				const dragActive = this.#dragActive;
 				this.#dragActive = false;
 				if (!this.node) return;
@@ -355,7 +357,8 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				this.#suppressNextClick();
 				_fr0st_query.default.removeClass(this.#outerContainer, this.constructor.classes.dragging);
 				this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
-			}, {
+			};
+			const dragEvent = _fr0st_query.default.mouseDragFactory(downEvent, moveEvent, upEvent, {
 				debounce: false,
 				passive: false,
 				preventDefault: false
