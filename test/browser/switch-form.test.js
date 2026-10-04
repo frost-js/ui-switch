@@ -1,4 +1,5 @@
 import { expect, test } from '#test';
+import { dispatchDragEvent } from '../support/input/drag.js';
 
 test.describe('Switch form resets', () => {
     test.use({ mockClock: true });
@@ -152,18 +153,13 @@ test.describe('Switch form resets', () => {
     });
 
     test('ignores the remaining drag events after resetting mid-drag', async ({ page }) => {
-        await page.evaluate(() => {
-            const input = $.findOne('#switch');
-            $.prev(input).shift().dispatchEvent(new MouseEvent('mousedown', { clientX: 100 }));
-            window.dispatchEvent(new MouseEvent('mousemove', { clientX: 160 }));
-            input.form.reset();
-        });
+        await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'start', fraction: 0.1 });
+        await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'move', fraction: 0.6 });
+        await page.evaluate(() => $.findOne('#form').reset());
         await page.clock.runFor(1);
-        await page.evaluate(() => {
-            window.dispatchEvent(new MouseEvent('mousemove', { clientX: 180 }));
-            window.dispatchEvent(new MouseEvent('mouseup'));
-            $.findOne('.switch-outer').click();
-        });
+        await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'move', fraction: 0.9 });
+        await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'end', fraction: 0.9 });
+        await page.locator('.switch-outer').dispatchEvent('click', { button: 0 });
 
         await expect(page.locator('#switch')).not.toBeChecked();
         await expect(page.locator('.switch-outer')).not.toHaveClass(/switch-dragging/);
@@ -174,13 +170,10 @@ test.describe('Switch form resets', () => {
     });
 
     test('clears drag click suppression on reset', async ({ page }) => {
-        await page.evaluate(() => {
-            const input = $.findOne('#switch');
-            $.prev(input).shift().dispatchEvent(new MouseEvent('mousedown', { clientX: 100 }));
-            window.dispatchEvent(new MouseEvent('mousemove', { clientX: 180 }));
-            window.dispatchEvent(new MouseEvent('mouseup'));
-            input.form.reset();
-        });
+        await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'start', fraction: 0.1 });
+        await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'move', fraction: 0.9 });
+        await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'end', fraction: 0.9 });
+        await page.evaluate(() => $.findOne('#form').reset());
         await page.clock.runFor(1);
 
         await expect(page.locator('#switch')).not.toBeChecked();

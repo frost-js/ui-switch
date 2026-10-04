@@ -1,4 +1,5 @@
 import { expect, test } from '#test';
+import { dispatchDragEvent, drag } from '../support/input/drag.js';
 
 test.use({ reducedMotion: 'no-preference' });
 
@@ -333,20 +334,11 @@ test.describe('Switch', () => {
                     duration: 100,
                     labelWidth: 80,
                 });
-                const outer = $.prev(input).shift();
                 component.setState(true);
-
-                const event = new Event('touchstart', {
-                    bubbles: true,
-                    cancelable: true,
-                });
-                Object.defineProperty(event, 'touches', {
-                    value: [{ pageX: 10, pageY: 10 }],
-                });
-                outer.dispatchEvent(event);
-                component.dispose();
                 return component;
             });
+            await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'start', fraction: 0.1 });
+            await component.evaluate((value) => value.dispose());
             await page.clock.runFor(120);
 
             expect(await component.evaluate((value) => value.node)).toBeNull();
@@ -384,16 +376,13 @@ test.describe('Switch', () => {
                 await page.evaluate((checked) => {
                     const input = $.findOne('#switch');
                     $.setProperty(input, 'checked', checked);
-                    const component = UI.Switch.init(input, { animate: false, labelWidth: 80 });
-                    const outer = $.prev(input).shift();
-
+                    UI.Switch.init(input, { animate: false, labelWidth: 80 });
                     window.disableChanges = 0;
                     $.addEvent(input, 'change.ui.switch', () => window.disableChanges++);
-
-                    outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: checked ? 340 : 460 }));
-                    component.disable();
                 }, checked);
+                await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'start', fraction: checked ? 0.9 : 0.1 });
+                await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'move', fraction: checked ? 0.4 : 0.6 });
+                await page.evaluate(() => $.getData('#switch', 'switch').disable());
 
                 const input = page.locator('#switch');
                 const outer = page.locator('.switch-outer');
@@ -404,11 +393,9 @@ test.describe('Switch', () => {
                     `matrix(1, 0, 0, 1, ${checked ? 0 : -80}, 0)`,
                 );
 
-                await page.evaluate((checked) => {
-                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: checked ? 300 : 500 }));
-                    window.dispatchEvent(new MouseEvent('mouseup'));
-                    $.findOne('.switch-outer').click();
-                }, checked);
+                await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'move', fraction: checked ? 0.1 : 0.9 });
+                await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'end', fraction: checked ? 0.1 : 0.9 });
+                await outer.dispatchEvent('click', { button: 0 });
 
                 await expect(input).toHaveJSProperty('checked', checked);
                 await expect(outer).toHaveAttribute('aria-checked', `${checked}`);
@@ -793,9 +780,9 @@ test.describe('Switch', () => {
                         UI.Switch.init(input, { animate: false, labelWidth: 80 });
                         window.disabledChanges = 0;
                         $.addEvent(input, 'change.ui.switch', () => window.disabledChanges++);
-                        $.prev(input).shift().dispatchEvent(new MouseEvent('mousedown', { clientX: 100 }));
-                        window.dispatchEvent(new MouseEvent('mousemove', { clientX: 180 }));
                     });
+                    await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'start', fraction: 0.1 });
+                    await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'move', fraction: 0.9 });
                     const outer = page.locator('.switch-outer');
                     await expect(outer).toHaveClass(/\bswitch-dragging\b/);
 
@@ -804,10 +791,8 @@ test.describe('Switch', () => {
                     await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
                     await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
 
-                    await page.evaluate(() => {
-                        window.dispatchEvent(new MouseEvent('mousemove', { clientX: 200 }));
-                        window.dispatchEvent(new MouseEvent('mouseup'));
-                    });
+                    await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'move', fraction: 1 });
+                    await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'end', fraction: 1 });
                     await expect(page.locator('#switch')).not.toBeChecked();
                     await expect(outer).toHaveAttribute('aria-checked', 'false');
                     expect(await page.evaluate(() => window.disabledChanges)).toBe(0);
@@ -999,25 +984,13 @@ test.describe('Switch', () => {
         test.describe('drag', () => {
             test('drags with the mouse in both directions', async ({ page }) => {
                 await page.evaluate(() => {
-                    const input = $.findOne('#switch');
-                    UI.Switch.init(input, {
-                        animate: false,
-                        labelWidth: 80,
-                    });
-                    const outer = $.prev(input).shift();
-                    outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500 }));
-                    window.dispatchEvent(new MouseEvent('mouseup'));
+                    UI.Switch.init($.findOne('#switch'), { animate: false, labelWidth: 80 });
                 });
 
+                await drag(page, '.switch-outer');
                 await expect(page.locator('#switch')).toBeChecked();
 
-                await page.evaluate(() => {
-                    const outer = $.findOne('.switch-outer');
-                    outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 300 }));
-                    window.dispatchEvent(new MouseEvent('mouseup'));
-                });
+                await drag(page, '.switch-outer', { from: 0.9, to: 0.1 });
                 await expect(page.locator('#switch')).not.toBeChecked();
             });
 
@@ -1025,82 +998,40 @@ test.describe('Switch', () => {
                 await page.evaluate(() => {
                     const input = $.findOne('#switch');
                     $.setAttribute(input, { dir: 'rtl' });
-                    UI.Switch.init(input, {
-                        animate: false,
-                        labelWidth: 80,
-                    });
+                    UI.Switch.init(input, { animate: false, labelWidth: 80 });
                 });
 
                 const outer = page.locator('.switch-outer');
                 await expect(outer).toHaveAttribute('dir', 'rtl');
                 await expect(outer).toHaveCSS('direction', 'rtl');
-                await expect(outer.locator('.switch')).toHaveCSS(
-                    'transform',
-                    'matrix(1, 0, 0, 1, 80, 0)',
-                );
-                await page.evaluate(() => {
-                    const outer = $.findOne('.switch-outer');
-                    outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 300 }));
-                    window.dispatchEvent(new MouseEvent('mouseup'));
-                });
+                await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 80, 0)');
+
+                await drag(page, '.switch-outer', { from: 0.9, to: 0.1 });
                 await expect(page.locator('#switch')).toBeChecked();
-                await expect(outer.locator('.switch')).toHaveCSS(
-                    'transform',
-                    'matrix(1, 0, 0, 1, 0, 0)',
-                );
+                await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
             });
 
             test('treats sub-threshold mouse movement as a click', async ({ page }) => {
                 await page.evaluate(() => {
-                    const input = $.findOne('#switch');
-                    UI.Switch.init(input, {
-                        animate: false,
-                        labelWidth: 80,
-                    });
-                    const outer = $.prev(input).shift();
-                    outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 401 }));
-                    window.dispatchEvent(new MouseEvent('mouseup'));
-                    outer.click();
+                    UI.Switch.init($.findOne('#switch'), { animate: false, labelWidth: 80 });
                 });
+
+                await drag(page, '.switch-outer', { from: 0.5, to: 0.51 });
                 await expect(page.locator('#switch')).toBeChecked();
             });
 
             test('drags with touch and suppresses the generated click', async ({ page }) => {
                 await page.evaluate(() => {
-                    const input = $.findOne('#switch');
-                    UI.Switch.init(input, {
-                        animate: false,
-                        labelWidth: 80,
-                    });
-                    const outer = $.prev(input).shift();
-                    const rect = $.rect(outer);
-                    const y = rect.top + (rect.height / 2);
-                    const dispatchTouch = (target, type, x, active) => {
-                        const event = new Event(type, {
-                            bubbles: true,
-                            cancelable: true,
-                        });
-                        Object.defineProperty(event, 'touches', {
-                            value: active ? [{ pageX: x, pageY: y }] : [],
-                        });
-                        target.dispatchEvent(event);
-                    };
-
-                    dispatchTouch(outer, 'touchstart', rect.left + 10, true);
-                    dispatchTouch(window, 'touchmove', rect.right + 40, true);
-                    $.getData(input, 'switch').setState(true);
-                    dispatchTouch(window, 'touchend', rect.right + 40, false);
-                    outer.dispatchEvent(new MouseEvent('click', {
-                        bubbles: true,
-                        button: 0,
-                        cancelable: true,
-                    }));
+                    UI.Switch.init($.findOne('#switch'), { animate: false, labelWidth: 80 });
                 });
+                await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'start', fraction: 0.1 });
+                expect(await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'move', fraction: 0.9 })).toBe(true);
+                await page.evaluate(() => $.getData('#switch', 'switch').setState(true));
+                await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'end', fraction: 0.9 });
 
-                await expect(page.locator('#switch')).toBeChecked();
                 const outer = page.locator('.switch-outer');
+                await outer.dispatchEvent('click', { button: 0 });
+                await expect(page.locator('#switch')).toBeChecked();
                 await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
                 await expect(outer).toHaveAttribute('aria-checked', 'true');
                 await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
@@ -1111,68 +1042,62 @@ test.describe('Switch', () => {
 
                 for (const direction of ['ltr', 'rtl']) {
                     for (const checked of [false, true]) {
-                        for (const distance of [1, 80]) {
-                            const stage = distance === 1 ? 'before' : 'after';
+                        for (const distance of [0.01, 0.8]) {
+                            for (const remainingTouch of [false, true]) {
+                                const stage = distance === 0.01 ? 'before' : 'after';
 
-                            test(`restores ${checked ? 'checked' : 'unchecked'} ${direction} state ${stage} the drag threshold`, async ({ page }) => {
-                                await page.evaluate(({ direction, checked, distance }) => {
-                                    const input = $.findOne('#switch');
-                                    $.setProperty(input, { checked });
-                                    $.setAttribute(input, { dir: direction });
-                                    UI.Switch.init(input, { animate: false, labelWidth: 80 });
-                                    const outer = $.prev(input).shift();
-                                    window.touchCancelChanges = 0;
-                                    $.addEvent(input, 'change.ui.switch', () => window.touchCancelChanges++);
-
-                                    const dispatchTouch = (target, type, touches) => {
-                                        const event = new Event(type, { bubbles: true });
-                                        Object.defineProperty(event, 'touches', { value: touches });
-                                        target.dispatchEvent(event);
-                                    };
+                                test(`restores ${checked ? 'checked' : 'unchecked'} ${direction} state ${stage} the drag threshold with ${remainingTouch ? 'another touch remaining' : 'no touches remaining'}`, async ({ page }) => {
+                                    await page.evaluate(({ direction, checked }) => {
+                                        const input = $.findOne('#switch');
+                                        $.setProperty(input, { checked });
+                                        $.setAttribute(input, { dir: direction });
+                                        UI.Switch.init(input, { animate: false, labelWidth: 80 });
+                                        window.touchCancelChanges = 0;
+                                        $.addEvent(input, 'change.ui.switch', () => window.touchCancelChanges++);
+                                    }, { direction, checked });
                                     const sign = (checked ? -1 : 1) * (direction === 'rtl' ? -1 : 1);
-                                    const touches = [{ pageX: 100 + distance * sign, pageY: 20 }];
-                                    dispatchTouch(outer, 'touchstart', [{ pageX: 100, pageY: 20 }]);
-                                    dispatchTouch(window, 'touchmove', touches);
-                                }, { direction, checked, distance });
+                                    const from = sign > 0 ? 0.1 : 0.9;
+                                    const to = from + (distance * sign);
+                                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'start', fraction: from });
+                                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'move', fraction: to });
 
-                                const outer = page.locator('.switch-outer');
-                                if (distance === 1) {
+                                    const outer = page.locator('.switch-outer');
+                                    if (distance === 0.01) {
+                                        await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
+                                    } else {
+                                        await expect(outer).toHaveClass(/\bswitch-dragging\b/);
+                                    }
+
+                                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'cancel', fraction: to, remainingTouch });
+                                    await page.clock.runFor(1);
+
+                                    const uncheckedX = direction === 'rtl' ? 80 : -80;
+                                    const x = checked ? 0 : uncheckedX;
+                                    await expect(page.locator('#switch')).toHaveJSProperty('checked', checked);
+                                    await expect(outer).toHaveAttribute('aria-checked', `${checked}`);
                                     await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
-                                } else {
-                                    await expect(outer).toHaveClass(/\bswitch-dragging\b/);
-                                }
+                                    await expect(outer.locator('.switch')).toHaveCSS('transform', `matrix(1, 0, 0, 1, ${x}, 0)`);
+                                    expect(await page.evaluate(() => window.touchCancelChanges)).toBe(0);
 
-                                await page.evaluate(() => window.dispatchEvent(new Event('touchcancel')));
-                                await page.clock.runFor(1);
+                                    const destination = from + (0.8 * sign);
+                                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'move', fraction: destination });
+                                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'end', fraction: destination });
+                                    await expect(page.locator('#switch')).toHaveJSProperty('checked', checked);
+                                    expect(await page.evaluate(() => window.touchCancelChanges)).toBe(0);
 
-                                const uncheckedX = direction === 'rtl' ? 80 : -80;
-                                const x = checked ? 0 : uncheckedX;
-                                await expect(page.locator('#switch')).toHaveJSProperty('checked', checked);
-                                await expect(outer).toHaveAttribute('aria-checked', `${checked}`);
-                                await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
-                                await expect(outer.locator('.switch')).toHaveCSS('transform', `matrix(1, 0, 0, 1, ${x}, 0)`);
-                                expect(await page.evaluate(() => window.touchCancelChanges)).toBe(0);
+                                    await outer.click();
+                                    await expect(page.locator('#switch')).toHaveJSProperty('checked', !checked);
+                                    await expect(outer).toHaveAttribute('aria-checked', `${!checked}`);
+                                    expect(await page.evaluate(() => window.touchCancelChanges)).toBe(1);
 
-                                await page.evaluate(({ direction, checked }) => {
-                                    const sign = (checked ? -1 : 1) * (direction === 'rtl' ? -1 : 1);
-                                    const move = new Event('touchmove');
-                                    Object.defineProperty(move, 'touches', {
-                                        value: [{ pageX: 100 + 80 * sign, pageY: 20 }],
-                                    });
-                                    window.dispatchEvent(move);
-                                    const end = new Event('touchend');
-                                    Object.defineProperty(end, 'touches', { value: [] });
-                                    window.dispatchEvent(end);
-                                }, { direction, checked });
-
-                                await expect(page.locator('#switch')).toHaveJSProperty('checked', checked);
-                                expect(await page.evaluate(() => window.touchCancelChanges)).toBe(0);
-
-                                await outer.click();
-                                await expect(page.locator('#switch')).toHaveJSProperty('checked', !checked);
-                                await expect(outer).toHaveAttribute('aria-checked', `${!checked}`);
-                                expect(await page.evaluate(() => window.touchCancelChanges)).toBe(1);
-                            });
+                                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'start', fraction: 1 - from });
+                                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'move', fraction: 1 - destination });
+                                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'end', fraction: 1 - destination });
+                                    await expect(page.locator('#switch')).toHaveJSProperty('checked', checked);
+                                    await expect(outer).toHaveAttribute('aria-checked', `${checked}`);
+                                    expect(await page.evaluate(() => window.touchCancelChanges)).toBe(2);
+                                });
+                            }
                         }
                     }
                 }
@@ -1184,12 +1109,9 @@ test.describe('Switch', () => {
                         window.touchCancelChanges = 0;
                         $.addEvent(input, 'change.ui.switch', () => window.touchCancelChanges++);
                         component.setState(true);
-
-                        const start = new Event('touchstart', { bubbles: true });
-                        Object.defineProperty(start, 'touches', { value: [{ pageX: 100, pageY: 20 }] });
-                        $.prev(input).shift().dispatchEvent(start);
-                        window.dispatchEvent(new Event('touchcancel'));
                     });
+                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'start', fraction: 0.1 });
+                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'cancel', fraction: 0.1 });
                     await page.clock.runFor(5100);
 
                     await expect(page.locator('#switch')).not.toBeChecked();
@@ -1207,18 +1129,18 @@ test.describe('Switch', () => {
                 test('preserves a state change started after the drag was reset', async ({ page }) => {
                     await page.evaluate(() => {
                         const input = $.findOne('#switch');
-                        const component = UI.Switch.init(input, { duration: 100, labelWidth: 80 });
+                        UI.Switch.init(input, { duration: 100, labelWidth: 80 });
                         window.touchCancelChanges = 0;
                         $.addEvent(input, 'change.ui.switch', () => window.touchCancelChanges++);
-
-                        const start = new Event('touchstart', { bubbles: true });
-                        Object.defineProperty(start, 'touches', { value: [{ pageX: 100, pageY: 20 }] });
-                        $.prev(input).shift().dispatchEvent(start);
+                    });
+                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'start', fraction: 0.1 });
+                    await page.evaluate(() => {
+                        const component = $.getData('#switch', 'switch');
                         component.disable();
                         component.enable();
                         component.setState(true);
-                        window.dispatchEvent(new Event('touchcancel'));
                     });
+                    await page.evaluate(dispatchDragEvent, { pointer: 'touch', phase: 'cancel', fraction: 0.1 });
                     await page.clock.runFor(200);
 
                     await expect(page.locator('#switch')).toBeChecked();
@@ -1227,57 +1149,54 @@ test.describe('Switch', () => {
                 });
             });
 
-            for (const { name, start } of [
-                {
-                    name: 'non-primary button',
-                    start: (outer) => outer.dispatchEvent(new MouseEvent('mousedown', {
-                        bubbles: true,
-                        button: 1,
-                        clientX: 400,
-                    })),
-                },
-                {
-                    name: 'malformed mouse event',
-                    start: (outer) => outer.dispatchEvent(new Event('mousedown', {
-                        bubbles: true,
-                        cancelable: true,
-                    })),
-                },
-            ]) {
-                test(`rejects a drag start with a ${name}`, async ({ page }) => {
-                    const outer = await page.evaluateHandle(() => {
-                        const input = $.findOne('#switch');
-                        UI.Switch.init(input, { animate: false, labelWidth: 80 });
-                        return $.prev(input).shift();
-                    });
-                    await page.evaluate(start, outer);
-                    await page.evaluate(() => {
-                        window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500 }));
-                    });
-
-                    const rendered = page.locator('.switch-outer');
-                    await expect(rendered).not.toHaveClass(/\bswitch-dragging\b/);
-                    await expect(rendered.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
-
-                    await page.evaluate(() => window.dispatchEvent(new MouseEvent('mouseup')));
-                    await expect(page.locator('#switch')).not.toBeChecked();
-                    await expect(rendered).toHaveAttribute('aria-checked', 'false');
+            test('rejects a drag start with a non-primary button', async ({ page }) => {
+                await page.evaluate(() => {
+                    UI.Switch.init($.findOne('#switch'), { animate: false, labelWidth: 80 });
                 });
-            }
+                const outer = page.locator('.switch-outer');
+                const box = await outer.boundingBox();
+                if (!box) {
+                    throw new Error('Could not measure the switch control.');
+                }
 
-            test('ignores movement without a valid coordinate during a drag', async ({ page }) => {
+                const y = box.y + (box.height / 2);
+                await page.mouse.move(box.x + (box.width * 0.1), y);
+                await page.mouse.down({ button: 'right' });
+                await page.mouse.move(box.x + (box.width * 0.9), y, { steps: 8 });
+                await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
+                await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
+
+                await page.mouse.up({ button: 'right' });
+                await expect(page.locator('#switch')).not.toBeChecked();
+                await expect(outer).toHaveAttribute('aria-checked', 'false');
+            });
+
+            test('rejects a drag start with a malformed mouse event', async ({ page }) => {
                 await page.evaluate(() => {
                     const input = $.findOne('#switch');
                     UI.Switch.init(input, { animate: false, labelWidth: 80 });
-                    $.prev(input).shift().dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                    window.dispatchEvent(new Event('mousemove'));
+                    $.prev(input).shift().dispatchEvent(new Event('mousedown', { bubbles: true, cancelable: true }));
                 });
+                await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'move', fraction: 0.9 });
+                const outer = page.locator('.switch-outer');
+                await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
+                await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
+
+                await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'end', fraction: 0.9 });
+                await expect(page.locator('#switch')).not.toBeChecked();
+                await expect(outer).toHaveAttribute('aria-checked', 'false');
+            });
+
+            test('ignores movement without a valid coordinate during a drag', async ({ page }) => {
+                await page.evaluate(() => UI.Switch.init($.findOne('#switch'), { animate: false, labelWidth: 80 }));
+                await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'start', fraction: 0.1 });
+                await page.evaluate(() => window.dispatchEvent(new Event('mousemove')));
 
                 const outer = page.locator('.switch-outer');
                 await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
                 await expect(outer.locator('.switch')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, -80, 0)');
 
-                await page.evaluate(() => window.dispatchEvent(new MouseEvent('mouseup')));
+                await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'end', fraction: 0.1 });
                 await expect(page.locator('#switch')).not.toBeChecked();
                 await expect(outer).toHaveAttribute('aria-checked', 'false');
             });
@@ -1477,19 +1396,16 @@ test.describe('Switch', () => {
                     duration: 1200,
                     labelWidth: 80,
                 });
-                const outer = $.prev(input).shift();
-                outer.dispatchEvent(new MouseEvent('mousedown', { clientX: 400 }));
-                window.dispatchEvent(new MouseEvent('mousemove', { clientX: 460 }));
             });
+            await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'start', fraction: 0.1 });
+            await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'move', fraction: 0.6 });
 
             const outer = page.locator('.switch-outer');
             const track = outer.locator('.switch');
             await expect(outer).toHaveClass(/\bswitch-dragging\b/);
             await expect(track).toHaveCSS('transition-duration', '0s');
 
-            await page.evaluate(() => {
-                window.dispatchEvent(new MouseEvent('mouseup'));
-            });
+            await page.evaluate(dispatchDragEvent, { pointer: 'mouse', phase: 'end', fraction: 0.6 });
             await expect(outer).not.toHaveClass(/\bswitch-dragging\b/);
             await expect(track).toHaveCSS('transition-duration', '0.3s');
             await expect(page.locator('#switch')).toBeChecked();
