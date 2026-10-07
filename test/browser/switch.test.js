@@ -250,7 +250,7 @@ test.describe('Switch', () => {
 
             await page.evaluate(() => {
                 const input = $.findOne('#switch');
-                input.labels[0].removeAttribute('id');
+                $.removeAttribute(input.labels[0], 'id');
                 UI.Switch.init(input, { animate: false });
             });
             await expect(labels.first()).toHaveAttribute('id', /^switch-label/);

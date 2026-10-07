@@ -86,20 +86,20 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#animating = false;
 		#animationId = 0;
 		#ariaHidden;
-		#container;
+		#container = null;
 		#currentX = 0;
-		#divider;
+		#divider = null;
 		#dragActive = false;
-		#form;
+		#form = null;
 		#generatedLabelIds = /* @__PURE__ */ new Map();
 		#hidden;
-		#observer;
-		#offToggle;
-		#onToggle;
-		#outerContainer;
+		#observer = null;
+		#offToggle = null;
+		#onToggle = null;
+		#outerContainer = null;
 		#pendingResets = /* @__PURE__ */ new Map();
-		#resetHandler;
-		#resizeObserver;
+		#resetHandler = null;
+		#resizeObserver = null;
 		#rtl = false;
 		#sliding = false;
 		#suppressClickTimer = null;
@@ -314,7 +314,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			});
 			let dragStartX = 0;
 			let dragOffsetX = 0;
-			const downEvent = (event) => {
+			const downHandler = (event) => {
 				if (!this.node || event.type === "mousedown" && event.button !== 0 || _fr0st_query.default.is(this.node, ":disabled")) return false;
 				const { x } = (0, _fr0st_ui.getPosition)(event);
 				if (!Number.isFinite(x)) return false;
@@ -325,7 +325,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				dragOffsetX = x - this.#currentX;
 				_fr0st_query.default.focus(this.#outerContainer);
 			};
-			const moveEvent = (event) => {
+			const moveHandler = (event) => {
 				if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) return;
 				const { x } = (0, _fr0st_ui.getPosition)(event);
 				if (!Number.isFinite(x)) return;
@@ -340,7 +340,7 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				this.#currentX = _fr0st_query.default._clamp(x - dragOffsetX, minX, maxX);
 				_fr0st_query.default.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
 			};
-			const upEvent = (event) => {
+			const upHandler = (event) => {
 				const dragActive = this.#dragActive;
 				this.#dragActive = false;
 				if (!this.node) return;
@@ -358,12 +358,12 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 				_fr0st_query.default.removeClass(this.#outerContainer, this.constructor.classes.dragging);
 				this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
 			};
-			const dragEvent = _fr0st_query.default.mouseDragFactory(downEvent, moveEvent, upEvent, {
+			const dragHandler = _fr0st_query.default.mouseDragFactory(downHandler, moveHandler, upHandler, {
 				debounce: false,
 				passive: false,
 				preventDefault: false
 			});
-			_fr0st_query.default.addEvent(this.#outerContainer, "mousedown.ui.switch touchstart.ui.switch", dragEvent);
+			_fr0st_query.default.addEvent(this.#outerContainer, "mousedown.ui.switch touchstart.ui.switch", dragHandler);
 		}
 		/**
 		* Gets the translation for a checkbox state in the current text direction.

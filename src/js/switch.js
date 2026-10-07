@@ -58,20 +58,20 @@ export default class Switch extends BaseComponent {
     #animating = false;
     #animationId = 0;
     #ariaHidden;
-    #container;
+    #container = null;
     #currentX = 0;
-    #divider;
+    #divider = null;
     #dragActive = false;
-    #form;
+    #form = null;
     #generatedLabelIds = new Map();
     #hidden;
-    #observer;
-    #offToggle;
-    #onToggle;
-    #outerContainer;
+    #observer = null;
+    #offToggle = null;
+    #onToggle = null;
+    #outerContainer = null;
     #pendingResets = new Map();
-    #resetHandler;
-    #resizeObserver;
+    #resetHandler = null;
+    #resizeObserver = null;
     #rtl = false;
     #sliding = false;
     #suppressClickTimer = null;
@@ -403,7 +403,7 @@ export default class Switch extends BaseComponent {
         let dragStartX = 0;
         let dragOffsetX = 0;
 
-        const downEvent = (event) => {
+        const downHandler = (event) => {
             if (
                 !this.node ||
                 (event.type === 'mousedown' && event.button !== 0) ||
@@ -428,7 +428,7 @@ export default class Switch extends BaseComponent {
             $.focus(this.#outerContainer);
         };
 
-        const moveEvent = (event) => {
+        const moveHandler = (event) => {
             if (!this.node || !this.#dragActive || this.#toggleWidth <= 0) {
                 return;
             }
@@ -463,7 +463,7 @@ export default class Switch extends BaseComponent {
             $.setStyle(this.#container, { transform: `translateX(${this.#currentX}px)` });
         };
 
-        const upEvent = (event) => {
+        const upHandler = (event) => {
             const dragActive = this.#dragActive;
             this.#dragActive = false;
 
@@ -496,7 +496,7 @@ export default class Switch extends BaseComponent {
             this.#animateState(Math.abs(this.#currentX) < this.#toggleWidth / 2);
         };
 
-        const dragEvent = $.mouseDragFactory(downEvent, moveEvent, upEvent, {
+        const dragHandler = $.mouseDragFactory(downHandler, moveHandler, upHandler, {
             debounce: false,
             passive: false,
             preventDefault: false,
@@ -505,7 +505,7 @@ export default class Switch extends BaseComponent {
         $.addEvent(
             this.#outerContainer,
             'mousedown.ui.switch touchstart.ui.switch',
-            dragEvent,
+            dragHandler,
         );
     }
 
