@@ -66,7 +66,6 @@ var Switch = class Switch extends BaseComponent {
 	#onToggle = null;
 	#outerContainer = null;
 	#pendingResets = /* @__PURE__ */ new Map();
-	#resetHandler = null;
 	#resizeObserver = null;
 	#rtl = false;
 	#sliding = false;
@@ -117,9 +116,6 @@ var Switch = class Switch extends BaseComponent {
 		this.#observer?.disconnect();
 		for (const [label, id] of this.#generatedLabelIds || []) if ($.getAttribute(label, "id") === id) $.removeAttribute(label, "id");
 		$.remove(this.#outerContainer);
-		$.removeEvent(this.node, "focus.ui.switch");
-		$.removeEvent(this.node, "change.ui.switch");
-		if (this.#form && this.#resetHandler) $.removeEvent(this.#form, "reset.ui.switch", this.#resetHandler);
 		if (this.#hidden) $.addClass(this.node, this.constructor.classes.hide);
 		else $.removeClass(this.node, this.constructor.classes.hide);
 		if (this.#ariaHidden === null) $.removeAttribute(this.node, "aria-hidden");
@@ -134,7 +130,6 @@ var Switch = class Switch extends BaseComponent {
 		this.#offToggle = null;
 		this.#onToggle = null;
 		this.#outerContainer = null;
-		this.#resetHandler = null;
 		this.#resizeObserver = null;
 		super.dispose();
 	}
@@ -231,21 +226,18 @@ var Switch = class Switch extends BaseComponent {
 	* Attaches input, keyboard, click, mouse, and touch events.
 	*/
 	#events() {
-		if (this.#form) {
-			this.#resetHandler = (event) => {
-				const animationId = this.#animationId;
-				this.#pendingResets.set(event, animationId);
-				window.setTimeout(() => {
-					this.#pendingResets.delete(event);
-					if (this.node && !event.defaultPrevented && animationId === this.#animationId) this.#resetState();
-				}, 0);
-			};
-			$.addEvent(this.#form, "reset.ui.switch", this.#resetHandler);
-		}
-		$.addEvent(this.node, "focus.ui.switch", () => {
+		if (this.#form) this.listen(this.#form, "reset.ui.switch", (event) => {
+			const animationId = this.#animationId;
+			this.#pendingResets.set(event, animationId);
+			window.setTimeout(() => {
+				this.#pendingResets.delete(event);
+				if (this.node && !event.defaultPrevented && animationId === this.#animationId) this.#resetState();
+			}, 0);
+		});
+		this.listen(this.node, "focus.ui.switch", () => {
 			$.focus(this.#outerContainer);
 		});
-		$.addEvent(this.node, "change.ui.switch", (event) => {
+		this.listen(this.node, "change.ui.switch", (event) => {
 			if (event.skipUpdate || this.#sliding) return;
 			this.#animateState(this.getState());
 		});

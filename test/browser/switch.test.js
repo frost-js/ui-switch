@@ -210,6 +210,25 @@ test.describe('Switch', () => {
     test.describe('#dispose', () => {
         test.use({ mockClock: true });
 
+        test('preserves consumer change listeners registered before and after initialization', async ({ page }) => {
+            const events = await page.evaluate(() => {
+                const node = $.findOne('#switch');
+                const events = [];
+                $.addEvent(node, 'change.ui.switch', (event) => events.push(`before:${event.type}`));
+
+                const instance = UI.Switch.init(node, { animate: false });
+                $.addEvent(node, 'change.ui.switch', (event) => events.push(`after:${event.type}`));
+
+                instance.dispose();
+                instance.dispose();
+                $.triggerEvent(node, 'change.ui.switch');
+
+                return events;
+            });
+
+            expect(events).toEqual(['before:change', 'after:change']);
+        });
+
         for (const { name, dispose } of [
             { name: 'class', dispose: (instance) => instance.dispose() },
             { name: 'QuerySet', dispose: () => $('#switch').switch('dispose') },

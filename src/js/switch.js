@@ -70,7 +70,6 @@ export default class Switch extends BaseComponent {
     #onToggle = null;
     #outerContainer = null;
     #pendingResets = new Map();
-    #resetHandler = null;
     #resizeObserver = null;
     #rtl = false;
     #sliding = false;
@@ -144,12 +143,6 @@ export default class Switch extends BaseComponent {
         }
 
         $.remove(this.#outerContainer);
-        $.removeEvent(this.node, 'focus.ui.switch');
-        $.removeEvent(this.node, 'change.ui.switch');
-
-        if (this.#form && this.#resetHandler) {
-            $.removeEvent(this.#form, 'reset.ui.switch', this.#resetHandler);
-        }
 
         if (this.#hidden) {
             $.addClass(this.node, this.constructor.classes.hide);
@@ -177,7 +170,6 @@ export default class Switch extends BaseComponent {
         this.#offToggle = null;
         this.#onToggle = null;
         this.#outerContainer = null;
-        this.#resetHandler = null;
         this.#resizeObserver = null;
 
         super.dispose();
@@ -323,7 +315,7 @@ export default class Switch extends BaseComponent {
      */
     #events() {
         if (this.#form) {
-            this.#resetHandler = (event) => {
+            this.listen(this.#form, 'reset.ui.switch', (event) => {
                 const animationId = this.#animationId;
                 this.#pendingResets.set(event, animationId);
 
@@ -334,16 +326,14 @@ export default class Switch extends BaseComponent {
                         this.#resetState();
                     }
                 }, 0);
-            };
-
-            $.addEvent(this.#form, 'reset.ui.switch', this.#resetHandler);
+            });
         }
 
-        $.addEvent(this.node, 'focus.ui.switch', () => {
+        this.listen(this.node, 'focus.ui.switch', () => {
             $.focus(this.#outerContainer);
         });
 
-        $.addEvent(this.node, 'change.ui.switch', (event) => {
+        this.listen(this.node, 'change.ui.switch', (event) => {
             if (event.skipUpdate || this.#sliding) {
                 return;
             }

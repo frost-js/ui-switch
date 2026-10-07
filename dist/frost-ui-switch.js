@@ -98,7 +98,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		#onToggle = null;
 		#outerContainer = null;
 		#pendingResets = /* @__PURE__ */ new Map();
-		#resetHandler = null;
 		#resizeObserver = null;
 		#rtl = false;
 		#sliding = false;
@@ -149,9 +148,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#observer?.disconnect();
 			for (const [label, id] of this.#generatedLabelIds || []) if (_fr0st_query.default.getAttribute(label, "id") === id) _fr0st_query.default.removeAttribute(label, "id");
 			_fr0st_query.default.remove(this.#outerContainer);
-			_fr0st_query.default.removeEvent(this.node, "focus.ui.switch");
-			_fr0st_query.default.removeEvent(this.node, "change.ui.switch");
-			if (this.#form && this.#resetHandler) _fr0st_query.default.removeEvent(this.#form, "reset.ui.switch", this.#resetHandler);
 			if (this.#hidden) _fr0st_query.default.addClass(this.node, this.constructor.classes.hide);
 			else _fr0st_query.default.removeClass(this.node, this.constructor.classes.hide);
 			if (this.#ariaHidden === null) _fr0st_query.default.removeAttribute(this.node, "aria-hidden");
@@ -166,7 +162,6 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 			this.#offToggle = null;
 			this.#onToggle = null;
 			this.#outerContainer = null;
-			this.#resetHandler = null;
 			this.#resizeObserver = null;
 			super.dispose();
 		}
@@ -263,21 +258,18 @@ _fr0st_query = __toESM(_fr0st_query, 1);
 		* Attaches input, keyboard, click, mouse, and touch events.
 		*/
 		#events() {
-			if (this.#form) {
-				this.#resetHandler = (event) => {
-					const animationId = this.#animationId;
-					this.#pendingResets.set(event, animationId);
-					window.setTimeout(() => {
-						this.#pendingResets.delete(event);
-						if (this.node && !event.defaultPrevented && animationId === this.#animationId) this.#resetState();
-					}, 0);
-				};
-				_fr0st_query.default.addEvent(this.#form, "reset.ui.switch", this.#resetHandler);
-			}
-			_fr0st_query.default.addEvent(this.node, "focus.ui.switch", () => {
+			if (this.#form) this.listen(this.#form, "reset.ui.switch", (event) => {
+				const animationId = this.#animationId;
+				this.#pendingResets.set(event, animationId);
+				window.setTimeout(() => {
+					this.#pendingResets.delete(event);
+					if (this.node && !event.defaultPrevented && animationId === this.#animationId) this.#resetState();
+				}, 0);
+			});
+			this.listen(this.node, "focus.ui.switch", () => {
 				_fr0st_query.default.focus(this.#outerContainer);
 			});
-			_fr0st_query.default.addEvent(this.node, "change.ui.switch", (event) => {
+			this.listen(this.node, "change.ui.switch", (event) => {
 				if (event.skipUpdate || this.#sliding) return;
 				this.#animateState(this.getState());
 			});
