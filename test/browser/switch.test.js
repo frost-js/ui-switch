@@ -210,25 +210,6 @@ test.describe('Switch', () => {
     test.describe('#dispose', () => {
         test.use({ mockClock: true });
 
-        test('preserves consumer change listeners registered before and after initialization', async ({ page }) => {
-            const events = await page.evaluate(() => {
-                const node = $.findOne('#switch');
-                const events = [];
-                $.addEvent(node, 'change.ui.switch', (event) => events.push(`before:${event.type}`));
-
-                const instance = UI.Switch.init(node, { animate: false });
-                $.addEvent(node, 'change.ui.switch', (event) => events.push(`after:${event.type}`));
-
-                instance.dispose();
-                instance.dispose();
-                $.triggerEvent(node, 'change.ui.switch');
-
-                return events;
-            });
-
-            expect(events).toEqual(['before:change', 'after:change']);
-        });
-
         for (const { name, dispose } of [
             { name: 'class', dispose: (instance) => instance.dispose() },
             { name: 'QuerySet', dispose: () => $('#switch').switch('dispose') },
@@ -327,16 +308,23 @@ test.describe('Switch', () => {
             await expect(labels.nth(1)).toHaveAttribute('id', 'existing');
         });
 
-        test('removes the Switch when the original input is removed', async ({ page }) => {
-            expect(await page.evaluate(() => {
-                const input = $.findOne('#switch');
-                const component = UI.Switch.init(input, { animate: false });
-                $.remove(input);
-                return { node: component.node, options: component.options };
-            })).toEqual({ node: null, options: null });
+        test('preserves consumer change listeners registered before and after initialization', async ({ page }) => {
+            const events = await page.evaluate(() => {
+                const node = $.findOne('#switch');
+                const events = [];
+                $.addEvent(node, 'change.ui.switch', (event) => events.push(`before:${event.type}`));
 
-            await expect(page.locator('#switch')).toHaveCount(0);
-            await expect(page.locator('.switch-outer')).toHaveCount(0);
+                const instance = UI.Switch.init(node, { animate: false });
+                $.addEvent(node, 'change.ui.switch', (event) => events.push(`after:${event.type}`));
+
+                instance.dispose();
+                instance.dispose();
+                $.triggerEvent(node, 'change.ui.switch');
+
+                return events;
+            });
+
+            expect(events).toEqual(['before:change', 'after:change']);
         });
 
         test('can initialize again after disposal', async ({ page }) => {
@@ -366,6 +354,18 @@ test.describe('Switch', () => {
             await expect(page.locator('.switch-outer')).toHaveCount(1);
             await page.locator('.switch-outer').click();
             await expect(page.locator('#switch')).toBeChecked();
+        });
+
+        test('removes the Switch when the original input is removed', async ({ page }) => {
+            expect(await page.evaluate(() => {
+                const input = $.findOne('#switch');
+                const component = UI.Switch.init(input, { animate: false });
+                $.remove(input);
+                return { node: component.node, options: component.options };
+            })).toEqual({ node: null, options: null });
+
+            await expect(page.locator('#switch')).toHaveCount(0);
+            await expect(page.locator('.switch-outer')).toHaveCount(0);
         });
 
         test('stops native synchronization after disposal with pending mutations', async ({ page }) => {
