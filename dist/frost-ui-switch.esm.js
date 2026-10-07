@@ -81,7 +81,7 @@ var Switch = class Switch extends BaseComponent {
 	* @throws {TypeError} When the node is not a checkbox input element.
 	*/
 	constructor(node, options) {
-		if (!$.is(node, "input[type=\"checkbox\"]")) throw new TypeError("Switch must be created on a checkbox input element.");
+		if (!$._isElement(node) || !$.is(node, "input[type=\"checkbox\"]")) throw new TypeError("Switch must be created on a checkbox input element.");
 		super(node, options);
 		try {
 			this.#form = $.getProperty(this.node, "form");
