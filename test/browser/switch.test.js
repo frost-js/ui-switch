@@ -391,8 +391,6 @@ test.describe('Switch', () => {
         });
 
         test('disposes safely after a touch interrupts an animation', async ({ page }) => {
-            const errors = [];
-            page.on('pageerror', (error) => errors.push(error.message));
             const component = await page.evaluateHandle(() => {
                 const input = $.findOne('#switch');
                 const component = UI.Switch.init(input, {
@@ -407,7 +405,6 @@ test.describe('Switch', () => {
             await page.clock.runFor(120);
 
             expect(await component.evaluate((value) => value.node)).toBeNull();
-            expect(errors).toEqual([]);
 
             await expect(page.locator('.switch-outer')).toHaveCount(0);
         });

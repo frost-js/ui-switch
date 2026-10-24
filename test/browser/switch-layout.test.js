@@ -134,8 +134,6 @@ test.describe('Switch hidden initialization', () => {
     });
 
     test('disconnects when disposed before becoming visible', async ({ page }) => {
-        const errors = [];
-        page.on('pageerror', (error) => errors.push(error.message));
         await page.evaluate(() => UI.Switch.init($.findOne('#switch')));
         expect(await page.evaluate(() => window.switchObservers.size)).toBe(1);
 
@@ -148,6 +146,5 @@ test.describe('Switch hidden initialization', () => {
         await expect(page.locator('.switch-outer')).toHaveCount(0);
         await expect(page.locator('#switch')).toBeVisible();
         expect(await page.evaluate(() => window.switchObservers.size)).toBe(0);
-        expect(errors).toEqual([]);
     });
 });

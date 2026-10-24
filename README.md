@@ -282,8 +282,6 @@ A native checkbox `change` event also moves the rendered control to match the in
 
 Canceling a touch gesture restores the displayed and ARIA state from the checkbox without animating or emitting a change event. The next click or touch gesture remains available.
 
-After a native form reset, Switch defers its refresh until the checkbox has reset, then restores the displayed and ARIA state without animating or emitting a change event. The refresh cancels active dragging or animation. Canceled resets leave the current interaction unchanged, and an explicit state change requested after the reset takes precedence. Inputs associated with a form through the `form` attribute are also supported.
-
 ## fQuery API
 
 Importing Switch registers `switch` on `fQuery.QuerySet`:
@@ -319,9 +317,14 @@ Pass an options object to initialize every matched element, or pass a public met
 - Disabled switches leave the tab order and ignore keyboard, click, mouse, and touch interaction.
 - Changes to the checkbox's `disabled` and `required` attributes, and to ancestor fieldsets' `disabled` attributes, automatically update the rendered control. Becoming disabled cancels an active drag without changing the checkbox state.
 - The rendered control inherits `aria-describedby`, `aria-errormessage`, `aria-invalid`, and `aria-required`, including later updates and removals. Without an explicit `aria-required`, it reflects the checkbox's native `required` state.
-- The original checkbox remains the submitted form field and preserves native `checked`, `required`, and `disabled` behavior.
 
 Applications remain responsible for a meaningful visible label, instructions, validation feedback, and sufficient contrast when replacing the default semantic classes.
+
+## Forms
+
+The original checkbox remains the submitted form field and preserves native `checked`, `required`, and `disabled` behavior.
+
+After a native form reset, Switch defers its refresh until the checkbox has reset, then restores the displayed and ARIA state without animating or emitting a change event. The refresh cancels active dragging or animation. Canceled resets leave the current interaction unchanged, and an explicit state change requested after the reset takes precedence. Inputs associated with a form through the `form` attribute are also supported.
 
 ## Customization
 

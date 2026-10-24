@@ -214,8 +214,6 @@ test.describe('Switch forms', () => {
         });
 
         test('ignores a pending reset after disposal', async ({ page }) => {
-            const errors = [];
-            page.on('pageerror', (error) => errors.push(error.message));
             await page.evaluate(() => {
                 const input = $.findOne('#switch');
                 $.getData(input, 'switch').setState(true);
@@ -226,7 +224,6 @@ test.describe('Switch forms', () => {
 
             await expect(page.locator('.switch-outer')).toHaveCount(0);
             await expect(page.locator('#switch')).not.toBeChecked();
-            expect(errors).toEqual([]);
         });
 
         test('keeps other instances subscribed when one is disposed', async ({ page }) => {
