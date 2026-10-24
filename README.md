@@ -323,28 +323,7 @@ Pass an options object to initialize every matched element, or pass a public met
 
 Applications remain responsible for a meaningful visible label, instructions, validation feedback, and sufficient contrast when replacing the default semantic classes.
 
-## Themes and RTL
-
-Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly.
-
-Switch combines its component stylesheet with Frost UI v4 CSS custom properties, focus-ring tokens, semantic text/background utilities, and disabled opacity.
-
-```html
-<section data-ui-theme="dark">
-    <label for="dark-switch">Dark theme switch</label>
-    <input id="dark-switch" type="checkbox">
-</section>
-```
-
-Movement uses CSS `transform` transitions and respects `prefers-reduced-motion`. Initial checked state is rendered directly without an entrance transition.
-
-Normal document and ancestor direction is respected. A `dir` attribute placed directly on the original input is also copied to the rendered control:
-
-```html
-<input id="rtl-switch" type="checkbox" dir="rtl">
-```
-
-In RTL layouts, the visual positions and physical drag direction are mirrored while checked state semantics remain unchanged.
+## Customization
 
 ### Custom Sass builds
 
@@ -371,6 +350,29 @@ npx sass --load-path=node_modules src/styles.scss dist/styles.css
 ```
 
 Configure the [component variables](./src/scss/vars.scss) before loading the `switch` module. All variables have `!default` values. Include Frost UI CSS separately. Build tools that already resolve Sass modules from npm packages do not need the explicit load path.
+
+## Themes and RTL
+
+Frost UI follows the user's preferred color scheme by default. Set `data-ui-theme="light"` or `data-ui-theme="dark"` on the document or an ancestor to select a theme explicitly.
+
+Switch combines its component stylesheet with Frost UI v4 CSS custom properties, focus-ring tokens, semantic text/background utilities, and disabled opacity.
+
+```html
+<section data-ui-theme="dark">
+    <label for="dark-switch">Dark theme switch</label>
+    <input id="dark-switch" type="checkbox">
+</section>
+```
+
+Movement uses CSS `transform` transitions and respects `prefers-reduced-motion`. Initial checked state is rendered directly without an entrance transition.
+
+Normal document and ancestor direction is respected. A `dir` attribute placed directly on the original input is also copied to the rendered control:
+
+```html
+<input id="rtl-switch" type="checkbox" dir="rtl">
+```
+
+In RTL layouts, the visual positions and physical drag direction are mirrored while checked state semantics remain unchanged.
 
 ## Development
 
