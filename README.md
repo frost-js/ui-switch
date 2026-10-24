@@ -336,11 +336,10 @@ npm i -D sass
 `src/styles.scss`
 
 ```scss
-@use "@fr0st/ui-switch/src/scss/vars" with (
+@use "@fr0st/ui-switch/src/scss/switch" with (
     $switch-padding-x: 1.25rem,
     $switch-border-radius: 999px
 );
-@use "@fr0st/ui-switch/src/scss/switch";
 ```
 
 Compile the entry point with npm package resolution enabled:
@@ -349,7 +348,7 @@ Compile the entry point with npm package resolution enabled:
 npx sass --load-path=node_modules src/styles.scss dist/styles.css
 ```
 
-Configure the [component variables](./src/scss/vars.scss) before loading the `switch` module. All variables have `!default` values. Include Frost UI CSS separately. Build tools that already resolve Sass modules from npm packages do not need the explicit load path.
+The `switch` module forwards the [component variables](./src/scss/_vars.scss), all of which have `!default` values. Include Frost UI CSS separately. Build tools that already resolve Sass modules from npm packages do not need the explicit load path.
 
 ## Themes and RTL
 
