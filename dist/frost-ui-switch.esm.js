@@ -1,7 +1,7 @@
 import { BaseComponent, generateId, getPosition, initComponent, waitForTransition } from "@fr0st/ui";
 import $ from "@fr0st/query";
 
-//#region src/js/switch.js
+// src/js/switch.js
 var window = $.getWindow();
 var ariaAttributes = [
 	"aria-describedby",
@@ -485,11 +485,9 @@ var Switch = class Switch extends BaseComponent {
 	}
 };
 
-//#endregion
-//#region src/js/index.js
+// src/js/index.js
 initComponent("switch", Switch);
 var js_default = Switch;
 
-//#endregion
 export { js_default as default };
 //# sourceMappingURL=frost-ui-switch.esm.js.map
